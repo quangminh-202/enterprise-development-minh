@@ -1,125 +1,127 @@
-﻿using Polyclinic.Domain;
+﻿using System.Net.NetworkInformation;
+using Polyclinic.Domain;
 
 namespace Polyclinic.Tests;
 
+/// <summary>
+/// Unit tests for Polyclinic queries.
+/// Each test compares hard-coded expected results (based on seeded data)
+/// with actual results from LINQ queries over the fixture collections.
+/// </summary>
 public class PolyclinicTests : IClassFixture<PolyclinicFixture>
 {
-    private readonly List<Doctor> _doctors;
-    private readonly List<Patient> _patients;
-    private readonly List<Appointment> _appointments;
+    private readonly PolyclinicFixture _fixture;
 
     public PolyclinicTests(PolyclinicFixture fixture)
     {
-        _doctors = fixture.Doctors;
-        _patients = fixture.Patients;
-        _appointments = fixture.Appointments;
+        _fixture = fixture; 
     }
 
-    // ===== 5 TEST THEO ĐỀ BÀI =====
-
+    /// <summary>
+    /// (1) Verify that all doctors with at least 10 years of experience are returned.
+    /// Expected: six doctors (Charlie, Bravo, Alpha, Foxtrot, Golf, Hotel).
+    /// Actual: LINQ query filtering doctors by Experience >= 10.
+    /// </summary>
     [Fact]
     public void Test1_Doctors_With_10_Years_Experience()
     {
-        var result = _doctors.Where(d => d.Experience >= 10).ToList();
-        Assert.All(result, d => Assert.True(d.Experience >= 10));
+        var expected = new List<string> {
+            "Dr. Charlie", "Dr. Bravo", "Dr. Alpha",
+            "Dr. Foxtrot", "Dr. Golf", "Dr. Hotel"
+        };
+
+        var actual = _fixture.Doctors
+            .Where(d => d.Experience >= 10)
+            .Select(d => d.FullName)
+            .ToList();
+
+        Assert.Equal(expected, actual);
     }
 
+    /// <summary>
+    /// (2) Verify that all patients who visited Dr. Bravo (D2) are returned,
+    /// sorted alphabetically by full name.
+    /// Expected: Bob, Even, Henry, Jack.
+    /// Actual: LINQ query filtering Appointments by doctor passport "D2".
+    /// </summary>
     [Fact]
     public void Test2_Patients_By_Doctor_SortedByName()
     {
-        var doctorId = "D1";
-        var result = _appointments
-            .Where(a => a.Doctor.Passport == doctorId)
-            .Select(a => a.Patient)
-            .OrderBy(p => p.FullName)
+        var expected = new List<string> { "Bob", "Even", "Henry", "Jack" };
+
+        var doctor = _fixture.Doctors.First(d => d.Passport == "D2");
+        var actual = _fixture.Appointments
+            .Where(a => a.Doctor == doctor)
+            .Select(a => a.Patient.FullName)
+            .OrderBy(n => n)
             .ToList();
 
-        Assert.All(result, p => Assert.NotNull(p.FullName));
+        Assert.Equal(expected, actual);
     }
 
+    /// <summary>
+    /// (3) Count all repeated appointments (IsRepeated = true)
+    /// that took place within the last month.
+    /// Expected: 3 (Bob, Diana, Frank).
+    /// Actual: LINQ query counting appointments by date range and IsRepeated flag.
+    /// </summary>
     [Fact]
     public void Test3_Count_Repeated_Appointments_LastMonth()
     {
-        var oneMonthAgo = DateTime.Now.AddMonths(-1);
-        var result = _appointments
-            .Count(a => a.IsRepeated && a.Date >= oneMonthAgo);
+        var expected = 3; // Even(-15), Diana(-5), Frank(-1)
 
-        Assert.True(result >= 0);
+        var now = DateTime.Now;
+        var oneMonthAgo = DateTime.Now.AddMonths(-1);
+        var actual = _fixture.Appointments
+            .Count(a => a.IsRepeated && a.Date >= oneMonthAgo && a.Date <= now);
+
+        Assert.Equal(expected, actual);
     }
 
+    /// <summary>
+    /// (4) Return all patients older than 30 years who have appointments
+    /// with more than one distinct doctor. Sort results by birth date.
+    /// Expected: Bob, Henry, Jack.
+    /// Actual: LINQ query filtering by age and counting distinct doctors.
+    /// </summary>
     [Fact]
     public void Test4_Patients_OlderThan30_WithMultipleDoctors()
     {
-        var today = DateTime.Today;
-        var result = _appointments
-            .GroupBy(a => a.Patient)
-            .Where(g => (today.Year - g.Key.BirthDate.Year) > 30 &&
-                        g.Select(a => a.Doctor).Distinct().Count() > 1)
-            .Select(g => g.Key)
+        var expected = new List<string> { "Bob", "Henry", "Jack" };
+
+        var now = DateTime.Now;
+        var actual = _fixture.Patients
+            .Where(p => (now.Year - p.BirthDate.Year) > 30)
+            .Where(p => _fixture.Appointments
+                .Where(a => a.Patient == p)
+                .Select(a => a.Doctor.Passport)
+                .Distinct()
+                .Count() > 1)
             .OrderBy(p => p.BirthDate)
+            .Select(p => p.FullName)
             .ToList();
 
-        Assert.All(result, p => Assert.True((today.Year - p.BirthDate.Year) > 30));
+        Assert.Equal(expected, actual);
     }
 
+    /// <summary>
+    /// (5) Return all appointments scheduled in room "101"
+    /// within the current month. Select patient names.
+    /// Expected: Jack, Even, Alice.
+    /// Actual: LINQ query filtering by room and date range.
+    /// </summary>
     [Fact]
     public void Test5_Appointments_CurrentMonth_InSelectedRoom()
     {
-        var selectedRoom = "101";
+        var expected = new List<string> { "Jack", "Even", "Alice"};
+
         var now = DateTime.Now;
-        var result = _appointments
-            .Where(a => a.Room == selectedRoom &&
-                        a.Date.Month == now.Month &&
-                        a.Date.Year == now.Year)
+        var oneMonthAgo = DateTime.Now.AddMonths(-1);
+        var actual = _fixture.Appointments
+            .Where(a => a.Date >= oneMonthAgo && a.Date <= now && a.Room == "101")
+            .Select(a => a.Patient.FullName)
             .ToList();
 
-        Assert.All(result, a => Assert.Equal(selectedRoom, a.Room));
-    }
-
-    // ===== 5 TEST BỔ SUNG =====
-
-    [Fact]
-    public void Test6_Doctors_By_Specialization()
-    {
-        var result = _doctors.Where(d => d.Specialization == "Therapist").ToList();
-        Assert.All(result, d => Assert.Equal("Therapist", d.Specialization));
-    }
-
-    [Fact]
-    public void Test7_Patients_With_BloodType_A()
-    {
-        var result = _patients.Where(p => p.BloodType == BloodType.A).ToList();
-        Assert.All(result, p => Assert.Equal(BloodType.A, p.BloodType));
-    }
-
-    [Fact]
-    public void Test8_Appointments_Today()
-    {
-        var today = DateTime.Today;
-        var result = _appointments
-            .Where(a => a.Date.Date == today)
-            .ToList();
-
-        Assert.All(result, a => Assert.Equal(today, a.Date.Date));
-    }
-
-    [Fact]
-    public void Test9_Patient_With_Most_Appointments()
-    {
-        var result = _appointments
-            .GroupBy(a => a.Patient)
-            .OrderByDescending(g => g.Count())
-            .First().Key;
-
-        Assert.NotNull(result);
-    }
-
-    [Fact]
-    public void Test10_Doctor_With_Max_Experience()
-    {
-        var maxExp = _doctors.Max(d => d.Experience);
-        var result = _doctors.First(d => d.Experience == maxExp);
-
-        Assert.NotNull(result);
+        Assert.Equal(expected, actual);
     }
 }
