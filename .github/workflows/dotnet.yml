@@ -1,0 +1,30 @@
+name: .NET Tests
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+
+  build:
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Install .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: 8.0.x
+
+    - name: Restore dependencies
+      run: dotnet restore ./PolyclinicLab/PolyclinicLab.sln
+    - name: Build
+      run: dotnet build --configuration Release --no-restore ./PolyclinicLab/PolyclinicLab.sln
+
+    # Execute all unit tests in the solution
+    - name: Execute unit tests
+      run: dotnet test ./PolyclinicLab/Polyclinic.Tests/Polyclinic.Tests.csproj --configuration Release --verbosity normal
