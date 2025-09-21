@@ -105,12 +105,13 @@ public class PolyclinicTests(PolyclinicFixture fixture) : IClassFixture<Polyclin
     [Fact]
     public void AppointmentsCurrentMonthInSelectedRoom()
     {
-        var expected = new List<string> { "Jack", "Even", "Alice"};
+        var expected = new List<string> {"Jack", "Even", "Alice", "Charlie", "Henry"};
 
         var today = DateTime.Today;
-        var oneMonthAgo = today.AddMonths(-1);
+        var firstDay = new DateTime(today.Year, today.Month, 1);
+        var lastDay = firstDay.AddMonths(1).AddDays(-1);
         var actual = fixture.Appointments
-            .Where(a => a.Date >= oneMonthAgo && a.Date <= today && a.Room == "101")
+            .Where(a => a.Date >= firstDay && a.Date <= lastDay && a.Room == "101")
             .Select(a => a.Patient.FullName)
             .ToList();
 
