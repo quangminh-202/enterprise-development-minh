@@ -1,7 +1,7 @@
-﻿using Polyclinic.Domain;
+﻿using Polyclinic.Domain.Models;
+using Polyclinic.Domain.Enums;
 
 namespace Polyclinic.Tests;
-
 
 /// <summary>
 /// Fixture that provides seeded data used for unit tests.
@@ -19,8 +19,8 @@ public class PolyclinicFixture
     public PolyclinicFixture()
     {
         // Seed Doctors
-        Doctors = new()
-        {
+        Doctors =
+        [
             new() { Passport="D1", FullName="Dr. Charlie", BirthYear=1970, Specialization="Therapist", Experience=20 },
             new() { Passport="D2", FullName="Dr. Bravo", BirthYear=1975, Specialization="Cardiologist", Experience=15 },
             new() { Passport="D3", FullName="Dr. Alpha", BirthYear=1980, Specialization="Surgeon", Experience=12 },
@@ -31,11 +31,11 @@ public class PolyclinicFixture
             new() { Passport="D8", FullName="Dr. Hotel", BirthYear=1983, Specialization="Pediatrician", Experience=11 },
             new() { Passport="D9", FullName="Dr. India", BirthYear=1988, Specialization="Cardiologist", Experience=6 },
             new() { Passport="D10", FullName="Dr. Juliet", BirthYear=1992, Specialization="Therapist", Experience=5 }
-        };
+        ];
 
         // Seed Patients
-        Patients = new()
-        {
+        Patients =
+        [
             new() { Passport="P1", FullName="Jack", Gender=Gender.Female, BirthDate=new(1985,1,3), Address="Addr1", BloodType=BloodType.A, RhFactor=RhFactor.Positive, Phone="+79613831297" },
             new() { Passport="P2", FullName="Even", Gender=Gender.Male, BirthDate=new(1990,2,2), Address="Addr2", BloodType=BloodType.B, RhFactor=RhFactor.Negative, Phone="+79613831286" },
             new() { Passport="P3", FullName="Henry", Gender=Gender.Male, BirthDate=new(1975,3,18), Address="Addr3", BloodType=BloodType.AB, RhFactor=RhFactor.Positive, Phone="+79613831211" },
@@ -46,12 +46,12 @@ public class PolyclinicFixture
             new() { Passport="P8", FullName="Charlie", Gender=Gender.Male, BirthDate=new(1988,8,15), Address="Addr8", BloodType=BloodType.AB, RhFactor=RhFactor.Negative, Phone="+79613831217" },
             new() { Passport="P9", FullName="Ivy", Gender=Gender.Female, BirthDate=new(1993,9,4), Address="Addr9", BloodType=BloodType.O, RhFactor=RhFactor.Positive, Phone="+79613831218" },
             new() { Passport="P10", FullName="Bob", Gender=Gender.Male, BirthDate=new(1970,10,23), Address="Addr10", BloodType=BloodType.A, RhFactor=RhFactor.Negative, Phone="+79613831219" }
-        };
+        ];
 
         // Seed Appointments
         var now = DateTime.Now;
-        Appointments = new()
-        {
+        Appointments =
+        [
             new() { Date=now.AddDays(-20), Room="101", IsRepeated=false, Patient=Patients[0], Doctor=Doctors[0] },
             new() { Date=now.AddDays(-15), Room="101", IsRepeated=true, Patient=Patients[1], Doctor=Doctors[1] },
             new() { Date=now.AddDays(-10), Room="102", IsRepeated=false, Patient=Patients[2], Doctor=Doctors[2] },
@@ -65,6 +65,6 @@ public class PolyclinicFixture
             new() { Date=now.AddDays(4),  Room="104", IsRepeated=false, Patient=Patients[0], Doctor=Doctors[1] },
             new() { Date=now.AddDays(5),  Room="103", IsRepeated=true, Patient=Patients[9], Doctor=Doctors[1] },
             new() { Date=now.AddDays(6),  Room="101", IsRepeated=false, Patient=Patients[2], Doctor=Doctors[1] }
-        };
+        ];
     }
 }

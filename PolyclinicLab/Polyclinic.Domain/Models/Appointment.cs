@@ -1,4 +1,4 @@
-﻿namespace Polyclinic.Domain;
+﻿namespace Polyclinic.Domain.Models;
 
 /// <summary>
 /// Represents a medical appointment in the polyclinic.
@@ -13,7 +13,7 @@ public class Appointment
     /// <summary>
     /// The room number where the appointment takes place
     /// </summary>
-    public string Room { get; set; }
+    public required string Room { get; set; }
 
     /// <summary>
     /// Indicates whether this is a repeated (follow-up) appointment (true)
@@ -24,10 +24,10 @@ public class Appointment
     /// <summary>
     /// The patient attending the appointment.
     /// </summary>
-    public Patient Patient { get; set; }
+    public required Patient Patient { get; set; }
 
     /// <summary>
     /// The doctor assigned to the appointment.
     /// </summary>
-    public Doctor Doctor { get; set; }
+    public required Doctor Doctor { get; set; }
 }

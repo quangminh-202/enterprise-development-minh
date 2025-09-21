@@ -8,29 +8,22 @@ namespace Polyclinic.Tests;
 /// Each test compares hard-coded expected results (based on seeded data)
 /// with actual results from LINQ queries over the fixture collections.
 /// </summary>
-public class PolyclinicTests : IClassFixture<PolyclinicFixture>
+public class PolyclinicTests(PolyclinicFixture fixture) : IClassFixture<PolyclinicFixture>
 {
-    private readonly PolyclinicFixture _fixture;
-
-    public PolyclinicTests(PolyclinicFixture fixture)
-    {
-        _fixture = fixture; 
-    }
-
     /// <summary>
     /// (1) Verify that all doctors with at least 10 years of experience are returned.
     /// Expected: six doctors (Charlie, Bravo, Alpha, Foxtrot, Golf, Hotel).
     /// Actual: LINQ query filtering doctors by Experience >= 10.
     /// </summary>
     [Fact]
-    public void Test1_Doctors_With_10_Years_Experience()
+    public void DoctorsWithTenYearsExperience()
     {
         var expected = new List<string> {
             "Dr. Charlie", "Dr. Bravo", "Dr. Alpha",
             "Dr. Foxtrot", "Dr. Golf", "Dr. Hotel"
         };
 
-        var actual = _fixture.Doctors
+        var actual = fixture.Doctors
             .Where(d => d.Experience >= 10)
             .Select(d => d.FullName)
             .ToList();
@@ -45,13 +38,12 @@ public class PolyclinicTests : IClassFixture<PolyclinicFixture>
     /// Actual: LINQ query filtering Appointments by doctor passport "D2".
     /// </summary>
     [Fact]
-    public void Test2_Patients_By_Doctor_SortedByName()
+    public void PatientsByDoctorSortedByName()
     {
         var expected = new List<string> { "Bob", "Even", "Henry", "Jack" };
 
-        var doctor = _fixture.Doctors.First(d => d.Passport == "D2");
-        var actual = _fixture.Appointments
-            .Where(a => a.Doctor == doctor)
+        var actual = fixture.Appointments
+            .Where(a => a.Doctor.Passport == "D2")
             .Select(a => a.Patient.FullName)
             .OrderBy(n => n)
             .ToList();
@@ -66,13 +58,13 @@ public class PolyclinicTests : IClassFixture<PolyclinicFixture>
     /// Actual: LINQ query counting appointments by date range and IsRepeated flag.
     /// </summary>
     [Fact]
-    public void Test3_Count_Repeated_Appointments_LastMonth()
+    public void CountRepeatedAppointmentsLastMonth()
     {
         var expected = 3; // Even(-15), Diana(-5), Frank(-1)
 
         var now = DateTime.Now;
-        var oneMonthAgo = DateTime.Now.AddMonths(-1);
-        var actual = _fixture.Appointments
+        var oneMonthAgo = now.AddMonths(-1);
+        var actual = fixture.Appointments
             .Count(a => a.IsRepeated && a.Date >= oneMonthAgo && a.Date <= now);
 
         Assert.Equal(expected, actual);
@@ -85,14 +77,14 @@ public class PolyclinicTests : IClassFixture<PolyclinicFixture>
     /// Actual: LINQ query filtering by age and counting distinct doctors.
     /// </summary>
     [Fact]
-    public void Test4_Patients_OlderThan30_WithMultipleDoctors()
+    public void PatientsOlderThanThirtyWithMultipleDoctors()
     {
         var expected = new List<string> { "Bob", "Henry", "Jack" };
 
         var now = DateTime.Now;
-        var actual = _fixture.Patients
+        var actual = fixture.Patients
             .Where(p => (now.Year - p.BirthDate.Year) > 30)
-            .Where(p => _fixture.Appointments
+            .Where(p => fixture.Appointments
                 .Where(a => a.Patient == p)
                 .Select(a => a.Doctor.Passport)
                 .Distinct()
@@ -111,14 +103,14 @@ public class PolyclinicTests : IClassFixture<PolyclinicFixture>
     /// Actual: LINQ query filtering by room and date range.
     /// </summary>
     [Fact]
-    public void Test5_Appointments_CurrentMonth_InSelectedRoom()
+    public void AppointmentsCurrentMonthInSelectedRoom()
     {
         var expected = new List<string> { "Jack", "Even", "Alice"};
 
-        var now = DateTime.Now;
-        var oneMonthAgo = DateTime.Now.AddMonths(-1);
-        var actual = _fixture.Appointments
-            .Where(a => a.Date >= oneMonthAgo && a.Date <= now && a.Room == "101")
+        var today = DateTime.Today;
+        var oneMonthAgo = today.AddMonths(-1);
+        var actual = fixture.Appointments
+            .Where(a => a.Date >= oneMonthAgo && a.Date <= today && a.Room == "101")
             .Select(a => a.Patient.FullName)
             .ToList();
 

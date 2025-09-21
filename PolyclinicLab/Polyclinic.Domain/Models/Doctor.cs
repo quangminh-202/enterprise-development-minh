@@ -1,4 +1,4 @@
-﻿namespace Polyclinic.Domain;
+﻿namespace Polyclinic.Domain.Models;
 
 /// <summary>
 /// Represents a doctor working in the polyclinic.
@@ -8,12 +8,12 @@ public class Doctor
     /// <summary>
     /// The passport number of the doctor.
     /// </summary>
-    public string Passport { get; set; }
+    public required string Passport { get; set; }
 
     /// <summary>
     /// The full name of the doctor.
     /// </summary>
-    public string FullName { get; set; }
+    public required string FullName { get; set; }
 
     /// <summary>
     /// The birth year of the doctor.
@@ -23,7 +23,7 @@ public class Doctor
     /// <summary>
     /// The medical specialization of the doctor
     /// </summary>
-    public string Specialization { get; set; }
+    public required string Specialization { get; set; }
 
     /// <summary>
     /// The total years of professional experience.

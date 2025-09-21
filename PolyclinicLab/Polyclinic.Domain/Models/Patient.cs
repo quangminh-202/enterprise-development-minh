@@ -1,20 +1,5 @@
-﻿namespace Polyclinic.Domain;
-
-/// <summary>
-/// Represents the gender of a patient.
-/// </summary>
-public enum Gender { Male, Female}
-
-/// <summary>
-/// Represents the blood type of a patient.
-/// </summary>
-public enum BloodType { A, B, AB, O}
-
-/// <summary>
-/// Represents the Rh factor of a patient.
-/// </summary>
-public enum RhFactor { Positive, Negative }
-
+﻿namespace Polyclinic.Domain.Models;
+using Polyclinic.Domain.Enums;
 
 /// <summary>
 /// Represents a patient of the polyclinic
@@ -24,12 +9,12 @@ public class Patient
     /// <summary>
     /// The passport number of the patient.
     /// </summary>
-    public string Passport { get; set; }
+    public required string Passport { get; set; }
 
     /// <summary>
     /// The full name of the patient.
     /// </summary>
-    public string FullName { get; set; }
+    public required string FullName { get; set; }
 
     /// <summary>
     /// The gender of the patient.
@@ -44,7 +29,7 @@ public class Patient
     /// <summary>
     /// The home address of the patient
     /// </summary>
-    public string Address { get; set; }
+    public required string Address { get; set; }
 
     /// <summary>
     /// The blood type of the patient
@@ -59,5 +44,5 @@ public class Patient
     /// <summary>
     /// The contact phone number of the patient.
     /// </summary>
-    public string Phone { get; set; }
+    public required string Phone { get; set; }
 }
