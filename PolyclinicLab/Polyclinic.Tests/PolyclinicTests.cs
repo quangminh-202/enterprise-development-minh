@@ -1,7 +1,4 @@
-﻿using System.Net.NetworkInformation;
-using Polyclinic.Domain;
-
-namespace Polyclinic.Tests;
+﻿namespace Polyclinic.Tests;
 
 /// <summary>
 /// Unit tests for Polyclinic queries.

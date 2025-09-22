@@ -1,5 +1,6 @@
-﻿namespace Polyclinic.Domain.Models;
-using Polyclinic.Domain.Enums;
+﻿using Polyclinic.Domain.Enums;
+
+namespace Polyclinic.Domain.Models;
 
 /// <summary>
 /// Represents a patient of the polyclinic
