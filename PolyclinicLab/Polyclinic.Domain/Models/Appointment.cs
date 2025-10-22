@@ -6,6 +6,21 @@
 public class Appointment
 {
     /// <summary>
+    /// Internal ID for in-memory storage.
+    /// </summary>
+    public int Id { get; set; }
+
+    /// <summary>
+    /// The patient ID (foreign key).
+    /// </summary>
+    public int PatientId { get; set; }
+
+    /// <summary>
+    /// The doctor ID (foreign key).
+    /// </summary>
+    public int DoctorId { get; set; }
+
+    /// <summary>
     /// The date and time of the appointment.
     /// </summary>
     public DateTime Date { get; set; }
@@ -13,7 +28,7 @@ public class Appointment
     /// <summary>
     /// The room number where the appointment takes place
     /// </summary>
-    public required string Room { get; set; }
+    public required int Room { get; set; }
 
     /// <summary>
     /// Indicates whether this is a repeated (follow-up) appointment (true)

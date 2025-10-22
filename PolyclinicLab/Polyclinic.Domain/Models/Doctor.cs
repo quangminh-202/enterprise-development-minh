@@ -6,6 +6,12 @@
 public class Doctor
 {
     /// <summary>
+    /// Internal unique ID for in-memory storage.
+    /// Used by the server to identify doctors when performing CRUD operations.
+    /// </summary>
+    public int Id { get; set; }
+
+    /// <summary>
     /// The passport number of the doctor.
     /// </summary>
     public required string Passport { get; set; }

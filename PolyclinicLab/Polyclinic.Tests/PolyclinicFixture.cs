@@ -52,19 +52,19 @@ public class PolyclinicFixture
         var now = DateTime.Now;
         Appointments =
         [
-            new() { Date=now.AddDays(-20), Room="101", IsRepeated=false, Patient=Patients[0], Doctor=Doctors[0] },
-            new() { Date=now.AddDays(-15), Room="101", IsRepeated=true, Patient=Patients[1], Doctor=Doctors[1] },
-            new() { Date=now.AddDays(-10), Room="102", IsRepeated=false, Patient=Patients[2], Doctor=Doctors[2] },
-            new() { Date=now.AddDays(-5),  Room="103", IsRepeated=true, Patient=Patients[3], Doctor=Doctors[3] },
-            new() { Date=now.AddDays(-2),  Room="101", IsRepeated=false, Patient=Patients[4], Doctor=Doctors[4] },
-            new() { Date=now.AddDays(-1),  Room="102", IsRepeated=true, Patient=Patients[5], Doctor=Doctors[5] },
-            new() { Date=now,             Room="103", IsRepeated=false, Patient=Patients[6], Doctor=Doctors[6] },
-            new() { Date=now.AddDays(1),  Room="101", IsRepeated=true, Patient=Patients[7], Doctor=Doctors[7] },
-            new() { Date=now.AddDays(2),  Room="102", IsRepeated=false, Patient=Patients[8], Doctor=Doctors[8] },
-            new() { Date=now.AddDays(3),  Room="103", IsRepeated=true, Patient=Patients[9], Doctor=Doctors[9] },
-            new() { Date=now.AddDays(4),  Room="104", IsRepeated=false, Patient=Patients[0], Doctor=Doctors[1] },
-            new() { Date=now.AddDays(5),  Room="103", IsRepeated=true, Patient=Patients[9], Doctor=Doctors[1] },
-            new() { Date=now.AddDays(6),  Room="101", IsRepeated=false, Patient=Patients[2], Doctor=Doctors[1] }
+            new() { Date=now.AddDays(-20), Room=101, IsRepeated=false, Patient=Patients[0], Doctor=Doctors[0] },
+            new() { Date=now.AddDays(-15), Room=101, IsRepeated=true, Patient=Patients[1], Doctor=Doctors[1] },
+            new() { Date=now.AddDays(-10), Room=102, IsRepeated=false, Patient=Patients[2], Doctor=Doctors[2] },
+            new() { Date=now.AddDays(-5),  Room=103, IsRepeated=true, Patient=Patients[3], Doctor=Doctors[3] },
+            new() { Date=now.AddDays(-2),  Room=101, IsRepeated=false, Patient=Patients[4], Doctor=Doctors[4] },
+            new() { Date=now.AddDays(-1),  Room=102, IsRepeated=true, Patient=Patients[5], Doctor=Doctors[5] },
+            new() { Date=now,             Room=103, IsRepeated=false, Patient=Patients[6], Doctor=Doctors[6] },
+            new() { Date=now.AddDays(1),  Room=101, IsRepeated=true, Patient=Patients[7], Doctor=Doctors[7] },
+            new() { Date=now.AddDays(2),  Room=102, IsRepeated=false, Patient=Patients[8], Doctor=Doctors[8] },
+            new() { Date=now.AddDays(3),  Room=103, IsRepeated=true, Patient=Patients[9], Doctor=Doctors[9] },
+            new() { Date=now.AddDays(4),  Room=104, IsRepeated=false, Patient=Patients[0], Doctor=Doctors[1] },
+            new() { Date=now.AddDays(5),  Room=103, IsRepeated=true, Patient=Patients[9], Doctor=Doctors[1] },
+            new() { Date=now.AddDays(6),  Room=101, IsRepeated=false, Patient=Patients[2], Doctor=Doctors[1] }
         ];
     }
 }

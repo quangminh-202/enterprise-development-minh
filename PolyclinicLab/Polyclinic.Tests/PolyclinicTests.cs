@@ -108,7 +108,7 @@ public class PolyclinicTests(PolyclinicFixture fixture) : IClassFixture<Polyclin
         var firstDay = new DateTime(today.Year, today.Month, 1);
         var lastDay = firstDay.AddMonths(1).AddDays(-1);
         var actual = fixture.Appointments
-            .Where(a => a.Date >= firstDay && a.Date <= lastDay && a.Room == "101")
+            .Where(a => a.Date >= firstDay && a.Date <= lastDay && a.Room == 101)
             .Select(a => a.Patient.FullName)
             .ToList();
 

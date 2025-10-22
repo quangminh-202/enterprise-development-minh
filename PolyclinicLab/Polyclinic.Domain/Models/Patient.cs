@@ -8,6 +8,11 @@ namespace Polyclinic.Domain.Models;
 public class Patient
 {
     /// <summary>
+    /// Internal unique ID for in-memory storage (not passport)
+    /// </summary>
+    public int Id { get; set; }
+
+    /// <summary>
     /// The passport number of the patient.
     /// </summary>
     public required string Passport { get; set; }
