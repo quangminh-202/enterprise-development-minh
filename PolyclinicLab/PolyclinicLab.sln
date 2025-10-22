@@ -9,11 +9,11 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Polyclinic.Tests", "Polycli
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Polyclinic.Api.Host", "Polyclinic.Server\Polyclinic.Api.Host.csproj", "{DC8C2435-7BD5-4F22-8857-9E9E5563E4CC}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Polyclinic.Infrastructure.InMemory", "ClassLibrary1\Polyclinic.Infrastructure.InMemory.csproj", "{CC07ACD0-3021-4099-AC0D-B2A2CE7034F1}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Polyclinic.Application", "Polyclinic.Application\Polyclinic.Application.csproj", "{25075A39-09CC-4232-85EB-65962851CD8B}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Polyclinic.Application.Contracts", "Polyclinic.Application.Contracts\Polyclinic.Application.Contracts.csproj", "{D4C6F0A8-7C00-47DE-968A-3181255001DF}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Polyclinic.Infrastructure.InMemory", "Polyclinic.Infrastructure.InMemory\Polyclinic.Infrastructure.InMemory.csproj", "{2DEF06AC-4471-40C9-8910-88E612C1B1B0}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -33,10 +33,6 @@ Global
 		{DC8C2435-7BD5-4F22-8857-9E9E5563E4CC}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{DC8C2435-7BD5-4F22-8857-9E9E5563E4CC}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{DC8C2435-7BD5-4F22-8857-9E9E5563E4CC}.Release|Any CPU.Build.0 = Release|Any CPU
-		{CC07ACD0-3021-4099-AC0D-B2A2CE7034F1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{CC07ACD0-3021-4099-AC0D-B2A2CE7034F1}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{CC07ACD0-3021-4099-AC0D-B2A2CE7034F1}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{CC07ACD0-3021-4099-AC0D-B2A2CE7034F1}.Release|Any CPU.Build.0 = Release|Any CPU
 		{25075A39-09CC-4232-85EB-65962851CD8B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{25075A39-09CC-4232-85EB-65962851CD8B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{25075A39-09CC-4232-85EB-65962851CD8B}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -45,6 +41,10 @@ Global
 		{D4C6F0A8-7C00-47DE-968A-3181255001DF}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D4C6F0A8-7C00-47DE-968A-3181255001DF}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{D4C6F0A8-7C00-47DE-968A-3181255001DF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2DEF06AC-4471-40C9-8910-88E612C1B1B0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2DEF06AC-4471-40C9-8910-88E612C1B1B0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2DEF06AC-4471-40C9-8910-88E612C1B1B0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2DEF06AC-4471-40C9-8910-88E612C1B1B0}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
