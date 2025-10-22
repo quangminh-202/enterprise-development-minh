@@ -1,5 +1,5 @@
 ﻿using Polyclinic.Domain.Models;
-using Polyclinic.Tests; // để dùng PolyclinicFixture
+using Polyclinic.Tests;
 
 namespace Polyclinic.Infrastructure.InMemory;
 
