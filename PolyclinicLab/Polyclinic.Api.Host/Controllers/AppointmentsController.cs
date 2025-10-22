@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using Polyclinic.Domain.Models;
-using Polyclinic.Application;
+using Polyclinic.Application.Contracts;
+using Polyclinic.Application.Services;
 
 namespace Polyclinic.Api.Host.Controllers;
 
@@ -33,29 +33,29 @@ public class AppointmentController(AppointmentService service) : ControllerBase
     /// <summary>
     /// Creates a new appointment record.
     /// </summary>
-    /// <param name="a">The appointment data to create.</param>
+    /// <param name="dto">The appointment data to create.</param>
     [HttpPost]
-    public IActionResult Create([FromBody] Appointment a)
+    public IActionResult Create([FromBody] AppointmentDto dto)
     {
-        service.Create(a);
-        return CreatedAtAction(nameof(Get), new { id = a.Id }, a);
+        service.Create(dto);
+        return CreatedAtAction(nameof(Get), new { id = dto.Id }, dto);
     }
 
     /// <summary>
     /// Updates an existing appointment by its ID.
     /// </summary>
     /// <param name="id">The ID of the appointment to update.</param>
-    /// <param name="a">The updated appointment data.</param>
+    /// <param name="dto">The updated appointment data.</param>
     [HttpPut("{id}")]
-    public IActionResult Update(int id, [FromBody] Appointment a)
+    public IActionResult Update(int id, [FromBody] AppointmentDto dto)
     {
         var existing = service.Get(id);
         if (existing == null)
             return NotFound($"Appointment with Id = {id} was not found.");
 
-        a.Id = id;
-        service.Update(a);
-        return Ok(a);
+        var updatedDto = dto with { Id = id };
+        service.Update(updatedDto);
+        return Ok(updatedDto);
     }
 
     /// <summary>

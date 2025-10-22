@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using Polyclinic.Domain.Models;
-using Polyclinic.Application;
+using Polyclinic.Application.Contracts;
+using Polyclinic.Application.Services;
 
 namespace Polyclinic.Api.Host.Controllers;
 
@@ -31,29 +31,29 @@ public class PatientController(PatientService service) : ControllerBase
     /// <summary>
     /// Creates a new patient record.
     /// </summary>
-    /// <param name="p">The patient information to create.</param>
+    /// <param name="dto">The patient information to create.</param>
     [HttpPost]
-    public IActionResult Create([FromBody] Patient p)
+    public IActionResult Create([FromBody] PatientDto dto)
     {
-        service.Create(p);
-        return CreatedAtAction(nameof(Get), new { id = p.Id }, p);
+        service.Create(dto);
+        return CreatedAtAction(nameof(Get), new { id = dto.Id }, dto);
     }
 
     /// <summary>
     /// Updates an existing patient record by ID.
     /// </summary>
     /// <param name="id">The ID of the patient to update.</param>
-    /// <param name="p">The updated patient information.</param>
+    /// <param name="dto">The updated patient information.</param>
     [HttpPut("{id}")]
-    public IActionResult Update(int id, [FromBody] Patient p)
+    public IActionResult Update(int id, [FromBody] PatientDto dto)
     {
         var existing = service.Get(id);
         if (existing == null)
             return NotFound($"Patient with Id = {id} was not found.");
 
-        p.Id = id;
-        service.Update(p);
-        return Ok(p);
+        var updatedDto = dto with { Id = id };
+        service.Update(updatedDto);
+        return Ok(updatedDto);
     }
 
     /// <summary>

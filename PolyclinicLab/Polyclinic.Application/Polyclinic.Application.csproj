@@ -7,8 +7,13 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="AutoMapper" Version="12.0.1" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\Polyclinic.Domain\Polyclinic.Domain.csproj" />
     <ProjectReference Include="..\Polyclinic.Infrastructure.InMemory\Polyclinic.Infrastructure.InMemory.csproj" />
+    <ProjectReference Include="..\Polyclinic.Application.Contracts\Polyclinic.Application.Contracts.csproj" />
   </ItemGroup>
 
 </Project>
