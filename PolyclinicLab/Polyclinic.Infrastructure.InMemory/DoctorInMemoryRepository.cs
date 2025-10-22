@@ -8,6 +8,9 @@ namespace Polyclinic.Infrastructure.InMemory;
 /// </summary>
 public class DoctorInMemoryRepository : IRepository<Doctor, int>
 {
+    /// <summary>
+    /// In-memory collection storing doctor data.
+    /// </summary>
     private readonly List<Doctor> _doctors = [];
 
     /// <summary>
