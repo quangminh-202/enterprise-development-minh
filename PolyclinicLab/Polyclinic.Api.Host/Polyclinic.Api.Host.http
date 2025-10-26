@@ -1,0 +1,22 @@
+@Polyclinic.Api.Host_HostAddress = https://localhost:7229
+@Accept = application/json
+
+### GET All Doctors
+GET {{Polyclinic.Api.Host_HostAddress}}/api/doctors
+Accept: {{Accept}}
+
+### GET Doctor by ID
+GET {{Polyclinic.Api.Host_HostAddress}}/api/doctors/1
+Accept: {{Accept}}
+
+### GET All Patients
+GET {{Polyclinic.Api.Host_HostAddress}}/api/patients
+Accept: {{Accept}}
+
+### GET All Appointments
+GET {{Polyclinic.Api.Host_HostAddress}}/api/appointments
+Accept: {{Accept}}
+
+### GET Analytics - Experienced Doctors
+GET {{Polyclinic.Api.Host_HostAddress}}/api/analytics/experienced-doctors?minExperience=10
+Accept: {{Accept}}

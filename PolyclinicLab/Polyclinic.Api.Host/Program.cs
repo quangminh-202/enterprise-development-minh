@@ -1,6 +1,8 @@
 ﻿using Polyclinic.Infrastructure.InMemory;
 using Polyclinic.Domain.Models;
+using Polyclinic.Domain.Interfaces;
 using Polyclinic.Application.Services;
+using Polyclinic.Application.Interfaces;
 using Polyclinic.Application.MappingProfiles;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -12,12 +14,16 @@ builder.Services.AddSwaggerGen();
 // Configure AutoMapper
 builder.Services.AddAutoMapper(typeof(AppointmentMappingProfile));
 
+// Register repositories
 builder.Services.AddSingleton<IRepository<Doctor, int>, DoctorInMemoryRepository>();
 builder.Services.AddSingleton<IRepository<Patient, int>, PatientInMemoryRepository>();
 builder.Services.AddSingleton<IRepository<Appointment, int>, AppointmentInMemoryRepository>();
-builder.Services.AddSingleton<DoctorService>();
-builder.Services.AddSingleton<PatientService>();
-builder.Services.AddSingleton<AppointmentService>();
+
+// Register services with their interfaces
+builder.Services.AddSingleton<IAppointmentService, AppointmentService>();
+builder.Services.AddSingleton<IDoctorService, DoctorService>();
+builder.Services.AddSingleton<IPatientService, PatientService>();
+builder.Services.AddSingleton<IAnalyticsService, AnalyticsService>();
 
 var app = builder.Build();
 
