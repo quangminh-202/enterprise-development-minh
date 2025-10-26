@@ -11,6 +11,10 @@
 public record PatientDto(
     int Id,
     string FullName,
-    string Passport,
+    string Gender,
+    DateTime BirthDate,
+    string Address,
+    string BloodType,
+    string RhFactor,
     string Phone
 );
