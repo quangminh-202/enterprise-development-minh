@@ -2,11 +2,15 @@
 
 /// <summary>
 /// Data Transfer Object (DTO) used to represent information about a patient.
-/// Contains key details such as full name, passport number, and contact phone.
+/// Contains key details such as full name, demographic information, medical data, and contact phone.
 /// </summary>
 /// <param name="Id">Unique identifier of the patient.</param>
 /// <param name="FullName">Full name of the patient.</param>
-/// <param name="Passport">Passport number of the patient, used as a unique personal identifier.</param>
+/// <param name="Gender">Gender of the patient.</param>
+/// <param name="BirthDate">Birth date of the patient.</param>
+/// <param name="Address">Address of the patient.</param>
+/// <param name="BloodType">Blood type of the patient.</param>
+/// <param name="RhFactor">Rh factor of the patient.</param>
 /// <param name="Phone">Contact phone number of the patient.</param>
 public record PatientDto(
     int Id,

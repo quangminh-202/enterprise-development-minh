@@ -76,12 +76,6 @@ public class AppointmentController(IAppointmentService service, ILogger<Appointm
                 return BadRequest("Appointment data is required");
             }
 
-            if (dto.Date < DateTime.Now.AddMinutes(-5)) // Allow 5 minutes tolerance
-            {
-                logger.LogWarning("Create appointment called with past date: {Date}", dto.Date);
-                return BadRequest("Appointment date cannot be in the past");
-            }
-
             if (dto.Room <= 0)
             {
                 logger.LogWarning("Create appointment called with invalid room: {Room}", dto.Room);
@@ -139,12 +133,6 @@ public class AppointmentController(IAppointmentService service, ILogger<Appointm
             {
                 logger.LogWarning("Update appointment called with null DTO for ID: {Id}", id);
                 return BadRequest("Appointment data is required");
-            }
-
-            if (dto.Date < DateTime.Now.AddMinutes(-5)) // Allow 5 minutes tolerance
-            {
-                logger.LogWarning("Update appointment called with past date: {Date} for ID: {Id}", dto.Date, id);
-                return BadRequest("Appointment date cannot be in the past");
             }
 
             if (dto.Room <= 0)

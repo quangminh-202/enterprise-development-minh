@@ -76,9 +76,38 @@ public class PatientController(IPatientService service, ILogger<PatientControlle
                 return BadRequest("Patient data is required");
             }
 
+            if (string.IsNullOrWhiteSpace(dto.FullName))
+            {
+                logger.LogWarning("Create patient called with empty FullName");
+                return BadRequest("Full name is required");
+            }
+
+            if (string.IsNullOrWhiteSpace(dto.Phone))
+            {
+                logger.LogWarning("Create patient called with empty Phone");
+                return BadRequest("Phone number is required");
+            }
+
+            if (string.IsNullOrWhiteSpace(dto.Address))
+            {
+                logger.LogWarning("Create patient called with empty Address");
+                return BadRequest("Address is required");
+            }
+
+            if (dto.BirthDate > DateTime.Now)
+            {
+                logger.LogWarning("Create patient called with future BirthDate: {BirthDate}", dto.BirthDate);
+                return BadRequest("Birth date cannot be in the future");
+            }
+
             var createdPatient = service.Create(dto);
             logger.LogInformation("Successfully created patient {Id}", createdPatient.Id);
             return CreatedAtAction(nameof(Get), new { id = createdPatient.Id }, createdPatient);
+        }
+        catch (ArgumentException ex)
+        {
+            logger.LogWarning(ex, "Validation error while creating patient");
+            return BadRequest(ex.Message);
         }
         catch (Exception ex)
         {
@@ -107,6 +136,30 @@ public class PatientController(IPatientService service, ILogger<PatientControlle
             {
                 logger.LogWarning("Update patient called with null DTO for ID: {Id}", id);
                 return BadRequest("Patient data is required");
+            }
+
+            if (string.IsNullOrWhiteSpace(dto.FullName))
+            {
+                logger.LogWarning("Update patient called with empty FullName for ID: {Id}", id);
+                return BadRequest("Full name is required");
+            }
+
+            if (string.IsNullOrWhiteSpace(dto.Phone))
+            {
+                logger.LogWarning("Update patient called with empty Phone for ID: {Id}", id);
+                return BadRequest("Phone number is required");
+            }
+
+            if (string.IsNullOrWhiteSpace(dto.Address))
+            {
+                logger.LogWarning("Update patient called with empty Address for ID: {Id}", id);
+                return BadRequest("Address is required");
+            }
+
+            if (dto.BirthDate > DateTime.Now)
+            {
+                logger.LogWarning("Update patient called with future BirthDate: {BirthDate} for ID: {Id}", dto.BirthDate, id);
+                return BadRequest("Birth date cannot be in the future");
             }
 
             var updatedPatient = service.Update(id, dto);

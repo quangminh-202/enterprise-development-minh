@@ -76,9 +76,32 @@ public class DoctorController(IDoctorService service, ILogger<DoctorController> 
                 return BadRequest("Doctor data is required");
             }
 
+            if (string.IsNullOrWhiteSpace(dto.FullName))
+            {
+                logger.LogWarning("Create doctor called with empty FullName");
+                return BadRequest("Full name is required");
+            }
+
+            if (string.IsNullOrWhiteSpace(dto.Specialization))
+            {
+                logger.LogWarning("Create doctor called with empty Specialization");
+                return BadRequest("Specialization is required");
+            }
+
+            if (dto.Experience < 0)
+            {
+                logger.LogWarning("Create doctor called with negative Experience: {Experience}", dto.Experience);
+                return BadRequest("Experience cannot be negative");
+            }
+
             var createdDoctor = service.Create(dto);
             logger.LogInformation("Successfully created doctor {Id}", createdDoctor.Id);
             return CreatedAtAction(nameof(Get), new { id = createdDoctor.Id }, createdDoctor);
+        }
+        catch (ArgumentException ex)
+        {
+            logger.LogWarning(ex, "Validation error while creating doctor");
+            return BadRequest(ex.Message);
         }
         catch (Exception ex)
         {
@@ -107,6 +130,24 @@ public class DoctorController(IDoctorService service, ILogger<DoctorController> 
             {
                 logger.LogWarning("Update doctor called with null DTO for ID: {Id}", id);
                 return BadRequest("Doctor data is required");
+            }
+
+            if (string.IsNullOrWhiteSpace(dto.FullName))
+            {
+                logger.LogWarning("Update doctor called with empty FullName for ID: {Id}", id);
+                return BadRequest("Full name is required");
+            }
+
+            if (string.IsNullOrWhiteSpace(dto.Specialization))
+            {
+                logger.LogWarning("Update doctor called with empty Specialization for ID: {Id}", id);
+                return BadRequest("Specialization is required");
+            }
+
+            if (dto.Experience < 0)
+            {
+                logger.LogWarning("Update doctor called with negative Experience: {Experience} for ID: {Id}", dto.Experience, id);
+                return BadRequest("Experience cannot be negative");
             }
 
             var updatedDoctor = service.Update(id, dto);
