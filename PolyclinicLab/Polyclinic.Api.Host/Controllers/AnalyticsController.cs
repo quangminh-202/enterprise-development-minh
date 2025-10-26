@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using Polyclinic.Domain.Models;
-using Polyclinic.Infrastructure.InMemory;
+using Polyclinic.Application.Contracts;
+using Polyclinic.Application.Interfaces;
 
 namespace Polyclinic.Api.Host.Controllers;
 
@@ -9,23 +9,31 @@ namespace Polyclinic.Api.Host.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/[controller]")]
-public class AnalyticsController(
-    IRepository<Doctor, int> doctorRepo,
-    IRepository<Patient, int> patientRepo,
-    IRepository<Appointment, int> appointmentRepo) : ControllerBase
+public class AnalyticsController(IAnalyticsService analyticsService, ILogger<AnalyticsController> logger) : ControllerBase
 {
     /// <summary>
     /// (1) Returns all doctors with at least 10 years of experience.
     /// </summary>
     [HttpGet("experienced-doctors")]
-    public IActionResult GetExperiencedDoctors()
+    public ActionResult<List<DoctorDto>> GetExperiencedDoctor([FromQuery] int minExperience = 10)
     {
-        var result = doctorRepo.ReadAll()
-            .Where(d => d.Experience >= 10)
-            .Select(d => d.FullName)
-            .ToList();
+        try
+        {
+            if (minExperience < 0 || minExperience > 100)
+            {
+                logger.LogWarning("Invalid minExperience value: {MinExperience}", minExperience);
+                return BadRequest("Experience value must be between 0 and 100.");
+            }
 
-        return Ok(result);
+            var result = analyticsService.GetExperiencedDoctors(minExperience);
+            logger.LogInformation("Retrieved {Count} experienced doctors with min {MinExperience} years", result.Count, minExperience);
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error occurred while getting experienced doctors");
+            return StatusCode(500, "An error occurred while retrieving experienced doctors");
+        }
     }
 
     /// <summary>
@@ -33,71 +41,119 @@ public class AnalyticsController(
     /// ordered alphabetically by full name.
     /// </summary>
     [HttpGet("patients-by-doctor/{doctorId}")]
-    public IActionResult GetPatientsByDoctor(int doctorId)
+    public ActionResult<List<PatientDto>> GetPatientsByDoctor(int doctorId)
     {
-        var result = appointmentRepo.ReadAll()
-            .Where(a => a.DoctorId == doctorId)
-            .Select(a => a.Patient.FullName)
-            .OrderBy(n => n)
-            .ToList();
+        try
+        {
+            if (doctorId <= 0)
+            {
+                logger.LogWarning("Invalid doctor ID provided: {DoctorId}", doctorId);
+                return BadRequest("Doctor ID must be greater than 0");
+            }
 
-        return Ok(result);
+            var doctorExists = analyticsService.DoctorExists(doctorId);
+            if (!doctorExists)
+            {
+                logger.LogWarning("Doctor with ID {DoctorId} not found", doctorId);
+                return NotFound($"Doctor with ID {doctorId} not found.");
+            }
+
+            var result = analyticsService.GetPatientsByDoctor(doctorId);
+            logger.LogInformation("Retrieved {Count} patients for doctor {DoctorId}", result.Count, doctorId);
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error occurred while getting patients by doctor {DoctorId}", doctorId);
+            return StatusCode(500, "An error occurred while retrieving patients");
+        }
     }
 
     /// <summary>
-    /// (3) Counts all repeated appointments that occurred within the last month.
+    /// (3) Returns all repeated appointments that occurred within the last N months.
+    /// Default = 1.
     /// </summary>
     [HttpGet("repeated-appointments-count")]
-    public IActionResult GetRepeatedAppointmentsCount()
+    public ActionResult<RepeatedAppointmentsAnalyticsDto> GetRepeatedAppointments([FromQuery] int months = 1)
     {
-        var now = DateTime.Now;
-        var oneMonthAgo = now.AddMonths(-1);
+        try
+        {
+            if (months <= 0 || months > 12)
+            {
+                logger.LogWarning("Invalid months parameter: {Months}", months);
+                return BadRequest("The number of months must be between 1 and 12.");
+            }
 
-        var count = appointmentRepo.ReadAll()
-            .Count(a => a.IsRepeated && a.Date >= oneMonthAgo && a.Date <= now);
-
-        return Ok(count);
+            var result = analyticsService.GetRepeatedAppointments(months);
+            logger.LogInformation("Retrieved {Count} repeated appointments within last {Months} months", 
+                result.TotalCount, months);
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error occurred while getting repeated appointments");
+            return StatusCode(500, "An error occurred while retrieving repeated appointments");
+        }
     }
+
 
     /// <summary>
     /// (4) Returns all patients older than 30 years
     /// who have appointments with more than one distinct doctor.
     /// </summary>
-    [HttpGet("patients-older-than-thirty-with-multiple-doctors")]
-    public IActionResult GetPatientsOlderThanThirtyWithMultipleDoctors()
+    [HttpGet("patients-older-than-with-multiple-doctors")]
+    public ActionResult<List<PatientAnalyticsDto>> GetPatientsOlderThanWithMultipleDoctors([FromQuery] int age = 30)
     {
-        var now = DateTime.Now;
+        try
+        {
+            if (age < 0 || age > 100)
+            {
+                logger.LogWarning("Invalid age parameter: {Age}", age);
+                return BadRequest("Age must be between 0 and 100.");
+            }
 
-        var patients = patientRepo.ReadAll()
-            .Where(p => (now.Year - p.BirthDate.Year) > 30)
-            .Where(p => appointmentRepo.ReadAll()
-                .Where(a => a.Patient.Id == p.Id)
-                .Select(a => a.Doctor.Id)
-                .Distinct()
-                .Count() > 1)
-            .OrderBy(p => p.BirthDate)
-            .Select(p => p.FullName)
-            .ToList();
-
-        return Ok(patients);
+            var result = analyticsService.GetPatientsOlderThanWithMultipleDoctors(age);
+            logger.LogInformation("Retrieved {Count} patients older than {Age} with multiple doctors", 
+                result.Count, age);
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error occurred while getting patients older than {Age}", age);
+            return StatusCode(500, "An error occurred while retrieving patients");
+        }
     }
 
-    /// <summary>
+        /// <summary>
     /// (5) Returns all appointments scheduled in a specific room (default = 101)
     /// within the current month.
     /// </summary>
     [HttpGet("appointments-in-room")]
-    public IActionResult GetAppointmentsInRoom([FromQuery] int room = 101)
+    public ActionResult<List<AppointmentDto>> GetAppointmentsInRoom([FromQuery] int room = 101)
     {
-        var today = DateTime.Today;
-        var firstDay = new DateTime(today.Year, today.Month, 1);
-        var lastDay = firstDay.AddMonths(1).AddDays(-1);
+        try
+        {
+            if (room <= 0)
+            {
+                logger.LogWarning("Invalid room number: {Room}", room);
+                return BadRequest("Room number must be greater than 0");
+            }
 
-        var result = appointmentRepo.ReadAll()
-            .Where(a => a.Room == room && a.Date >= firstDay && a.Date <= lastDay)
-            .Select(a => a.Patient.FullName)
-            .ToList();
+            var result = analyticsService.GetAppointmentsInRoom(room);
 
-        return Ok(result);
+            if (result == null || result.Count == 0)
+            {
+                logger.LogInformation("No appointments found in room {Room} for the current month", room);
+                return NotFound($"No appointments found in room {room} for the current month.");
+            }
+        
+            logger.LogInformation("Retrieved {Count} appointments in room {Room}", result.Count, room);
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error occurred while getting appointments in room {Room}", room);
+            return StatusCode(500, "An error occurred while retrieving appointments");
+        }
     }
 }

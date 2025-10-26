@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Polyclinic.Application.Contracts;
-using Polyclinic.Application.Services;
+using Polyclinic.Application.Interfaces;
 
 namespace Polyclinic.Api.Host.Controllers;
 
@@ -9,23 +9,56 @@ namespace Polyclinic.Api.Host.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/[controller]")]
-public class DoctorController(DoctorService service) : ControllerBase
+public class DoctorController(IDoctorService service, ILogger<DoctorController> logger) : ControllerBase
 {
     /// <summary>
     /// Returns a list of all doctors.
     /// </summary>
     [HttpGet]
-    public IActionResult GetAll() => Ok(service.GetAll());
+    public ActionResult<List<DoctorDto>> GetAll()
+    {
+        try
+        {
+            var doctors = service.GetAll();
+            logger.LogInformation("Retrieved {Count} doctors", doctors.Count);
+            return Ok(doctors);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error occurred while getting all doctors");
+            return StatusCode(500, "An error occurred while retrieving doctors");
+        }
+    }
 
     /// <summary>
     /// Returns a specific doctor by their unique ID.
     /// </summary>
     /// <param name="id">The ID of the doctor to retrieve.</param>
     [HttpGet("{id}")]
-    public IActionResult Get(int id)
+    public ActionResult<DoctorDto> Get(int id)
     {
-        var doctor = service.Get(id);
-        return doctor is null ? NotFound($"Doctor with Id = {id} was not found.") : Ok(doctor);
+        try
+        {
+            if (id <= 0)
+            {
+                logger.LogWarning("Invalid doctor ID provided: {Id}", id);
+                return BadRequest("Doctor ID must be greater than 0");
+            }
+
+            var doctor = service.Get(id);
+            if (doctor == null)
+            {
+                logger.LogWarning("Doctor with ID {Id} was not found", id);
+                return NotFound($"Doctor with Id = {id} was not found.");
+            }
+            
+            return Ok(doctor);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error occurred while getting doctor with ID {Id}", id);
+            return StatusCode(500, "An error occurred while retrieving the doctor");
+        }
     }
 
     /// <summary>
@@ -33,10 +66,25 @@ public class DoctorController(DoctorService service) : ControllerBase
     /// </summary>
     /// <param name="dto">The doctor information to create.</param>
     [HttpPost]
-    public IActionResult Create([FromBody] DoctorDto dto)
+    public ActionResult<DoctorDto> Create([FromBody] CreateUpdateDoctorDto dto)
     {
-        service.Create(dto);
-        return CreatedAtAction(nameof(Get), new { id = dto.Id }, dto);
+        try
+        {
+            if (dto == null)
+            {
+                logger.LogWarning("Create doctor called with null DTO");
+                return BadRequest("Doctor data is required");
+            }
+
+            var createdDoctor = service.Create(dto);
+            logger.LogInformation("Successfully created doctor {Id}", createdDoctor.Id);
+            return CreatedAtAction(nameof(Get), new { id = createdDoctor.Id }, createdDoctor);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error occurred while creating doctor");
+            return StatusCode(500, "An error occurred while creating the doctor");
+        }
     }
 
     /// <summary>
@@ -45,15 +93,36 @@ public class DoctorController(DoctorService service) : ControllerBase
     /// <param name="id">The ID of the doctor to update.</param>
     /// <param name="dto">The updated doctor information.</param>
     [HttpPut("{id}")]
-    public IActionResult Update(int id, [FromBody] DoctorDto dto)
+    public ActionResult<DoctorDto> Update(int id, [FromBody] CreateUpdateDoctorDto dto)
     {
-        var existing = service.Get(id);
-        if (existing == null)
-            return NotFound($"Doctor with Id = {id} was not found.");
+        try
+        {
+            if (id <= 0)
+            {
+                logger.LogWarning("Update doctor called with invalid ID: {Id}", id);
+                return BadRequest("Doctor ID must be greater than 0");
+            }
 
-        var updatedDto = dto with { Id = id };
-        service.Update(updatedDto);
-        return Ok(updatedDto);
+            if (dto == null)
+            {
+                logger.LogWarning("Update doctor called with null DTO for ID: {Id}", id);
+                return BadRequest("Doctor data is required");
+            }
+
+            var updatedDoctor = service.Update(id, dto);
+            logger.LogInformation("Successfully updated doctor {Id}", id);
+            return Ok(updatedDoctor);
+        }
+        catch (ArgumentException ex)
+        {
+            logger.LogWarning(ex, "Validation error while updating doctor {Id}", id);
+            return NotFound(ex.Message);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error occurred while updating doctor {Id}", id);
+            return StatusCode(500, "An error occurred while updating the doctor");
+        }
     }
 
     /// <summary>
@@ -61,13 +130,30 @@ public class DoctorController(DoctorService service) : ControllerBase
     /// </summary>
     /// <param name="id">The ID of the doctor to delete.</param>
     [HttpDelete("{id}")]
-    public IActionResult Delete(int id)
+    public ActionResult Delete(int id)
     {
-        var existing = service.Get(id);
-        if (existing == null)
-            return NotFound($"Doctor with Id = {id} was not found.");
+        try
+        {
+            if (id <= 0)
+            {
+                logger.LogWarning("Delete doctor called with invalid ID: {Id}", id);
+                return BadRequest("Doctor ID must be greater than 0");
+            }
 
-        service.Delete(id);
-        return NoContent();
+            var deleted = service.Delete(id);
+            if (!deleted)
+            {
+                logger.LogWarning("Delete doctor called for non-existent ID: {Id}", id);
+                return NotFound($"Doctor with Id = {id} was not found.");
+            }
+
+            logger.LogInformation("Successfully deleted doctor {Id}", id);
+            return NoContent();
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error occurred while deleting doctor {Id}", id);
+            return StatusCode(500, "An error occurred while deleting the doctor");
+        }
     }
 }

@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Polyclinic.Application.Contracts;
-using Polyclinic.Application.Services;
+using Polyclinic.Application.Interfaces;
 
 namespace Polyclinic.Api.Host.Controllers;
 
@@ -9,25 +9,55 @@ namespace Polyclinic.Api.Host.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/[controller]")]
-public class AppointmentController(AppointmentService service) : ControllerBase
+public class AppointmentController(IAppointmentService service, ILogger<AppointmentController> logger) : ControllerBase
 {
     /// <summary>
     /// Returns a list of all appointments.
     /// </summary>
     [HttpGet]
-    public IActionResult GetAll() => Ok(service.GetAll());
+    public ActionResult<List<AppointmentDto>> GetAll()
+    {
+        try
+        {
+            var appointments = service.GetAll();
+            return Ok(appointments);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error occurred while getting all appointments");
+            return StatusCode(500, "An error occurred while retrieving appointments");
+        }
+    }
 
     /// <summary>
     /// Returns a single appointment by its unique ID.
     /// </summary>
     /// <param name="id">The ID of the appointment.</param>
     [HttpGet("{id}")]
-    public IActionResult Get(int id)
+    public ActionResult<AppointmentDto> Get(int id)
     {
-        var appointment = service.Get(id);
-        if (appointment == null)
-            return NotFound($"Appointment with Id = {id} was not found.");
-        return Ok(appointment);
+        try
+        {
+            if (id <= 0)
+            {
+                logger.LogWarning("Invalid appointment ID provided: {Id}", id);
+                return BadRequest("Appointment ID must be greater than 0");
+            }
+
+            var appointment = service.Get(id);
+            if (appointment == null)
+            {
+                logger.LogWarning("Appointment with ID {Id} was not found", id);
+                return NotFound($"Appointment with Id = {id} was not found.");
+            }
+            
+            return Ok(appointment);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error occurred while getting appointment with ID {Id}", id);
+            return StatusCode(500, "An error occurred while retrieving the appointment");
+        }
     }
 
     /// <summary>
@@ -35,10 +65,57 @@ public class AppointmentController(AppointmentService service) : ControllerBase
     /// </summary>
     /// <param name="dto">The appointment data to create.</param>
     [HttpPost]
-    public IActionResult Create([FromBody] AppointmentDto dto)
+    public ActionResult<AppointmentDto> Create([FromBody] CreateUpdateAppointmentDto dto)
     {
-        service.Create(dto);
-        return CreatedAtAction(nameof(Get), new { id = dto.Id }, dto);
+        try
+        {
+            // Validate input data
+            if (dto == null)
+            {
+                logger.LogWarning("Create appointment called with null DTO");
+                return BadRequest("Appointment data is required");
+            }
+
+            if (dto.Date < DateTime.Now.AddMinutes(-5)) // Allow 5 minutes tolerance
+            {
+                logger.LogWarning("Create appointment called with past date: {Date}", dto.Date);
+                return BadRequest("Appointment date cannot be in the past");
+            }
+
+            if (dto.Room <= 0)
+            {
+                logger.LogWarning("Create appointment called with invalid room: {Room}", dto.Room);
+                return BadRequest("Room number must be greater than 0");
+            }
+
+            if (dto.DoctorId <= 0)
+            {
+                logger.LogWarning("Create appointment called with invalid doctor ID: {DoctorId}", dto.DoctorId);
+                return BadRequest("Doctor ID must be greater than 0");
+            }
+
+            if (dto.PatientId <= 0)
+            {
+                logger.LogWarning("Create appointment called with invalid patient ID: {PatientId}", dto.PatientId);
+                return BadRequest("Patient ID must be greater than 0");
+            }
+
+            var createdAppointment = service.Create(dto);
+            logger.LogInformation("Successfully created appointment {Id} for doctor {DoctorId} and patient {PatientId}", 
+                createdAppointment.Id, dto.DoctorId, dto.PatientId);
+            
+            return CreatedAtAction(nameof(Get), new { id = createdAppointment.Id }, createdAppointment);
+        }
+        catch (ArgumentException ex)
+        {
+            logger.LogWarning(ex, "Validation error while creating appointment");
+            return BadRequest(ex.Message);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error occurred while creating appointment");
+            return StatusCode(500, "An error occurred while creating the appointment");
+        }
     }
 
     /// <summary>
@@ -47,15 +124,62 @@ public class AppointmentController(AppointmentService service) : ControllerBase
     /// <param name="id">The ID of the appointment to update.</param>
     /// <param name="dto">The updated appointment data.</param>
     [HttpPut("{id}")]
-    public IActionResult Update(int id, [FromBody] AppointmentDto dto)
+    public ActionResult<AppointmentDto> Update(int id, [FromBody] CreateUpdateAppointmentDto dto)
     {
-        var existing = service.Get(id);
-        if (existing == null)
-            return NotFound($"Appointment with Id = {id} was not found.");
+        try
+        {
+            // Validate input data
+            if (id <= 0)
+            {
+                logger.LogWarning("Update appointment called with invalid ID: {Id}", id);
+                return BadRequest("Appointment ID must be greater than 0");
+            }
 
-        var updatedDto = dto with { Id = id };
-        service.Update(updatedDto);
-        return Ok(updatedDto);
+            if (dto == null)
+            {
+                logger.LogWarning("Update appointment called with null DTO for ID: {Id}", id);
+                return BadRequest("Appointment data is required");
+            }
+
+            if (dto.Date < DateTime.Now.AddMinutes(-5)) // Allow 5 minutes tolerance
+            {
+                logger.LogWarning("Update appointment called with past date: {Date} for ID: {Id}", dto.Date, id);
+                return BadRequest("Appointment date cannot be in the past");
+            }
+
+            if (dto.Room <= 0)
+            {
+                logger.LogWarning("Update appointment called with invalid room: {Room} for ID: {Id}", dto.Room, id);
+                return BadRequest("Room number must be greater than 0");
+            }
+
+            if (dto.DoctorId <= 0)
+            {
+                logger.LogWarning("Update appointment called with invalid doctor ID: {DoctorId} for ID: {Id}", dto.DoctorId, id);
+                return BadRequest("Doctor ID must be greater than 0");
+            }
+
+            if (dto.PatientId <= 0)
+            {
+                logger.LogWarning("Update appointment called with invalid patient ID: {PatientId} for ID: {Id}", dto.PatientId, id);
+                return BadRequest("Patient ID must be greater than 0");
+            }
+
+            var updatedAppointment = service.Update(id, dto);
+
+            logger.LogInformation("Successfully updated appointment {Id}", id);
+            return Ok(updatedAppointment);
+        }
+        catch (ArgumentException ex)
+        {
+            logger.LogWarning(ex, "Validation error while updating appointment {Id}", id);
+            return NotFound(ex.Message);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error occurred while updating appointment {Id}", id);
+            return StatusCode(500, "An error occurred while updating the appointment");
+        }
     }
 
     /// <summary>
@@ -63,13 +187,30 @@ public class AppointmentController(AppointmentService service) : ControllerBase
     /// </summary>
     /// <param name="id">The ID of the appointment to delete.</param>
     [HttpDelete("{id}")]
-    public IActionResult Delete(int id)
+    public ActionResult Delete(int id)
     {
-        var existing = service.Get(id);
-        if (existing == null)
-            return NotFound($"Appointment with Id = {id} was not found.");
+        try
+        {
+            if (id <= 0)
+            {
+                logger.LogWarning("Delete appointment called with invalid ID: {Id}", id);
+                return BadRequest("Appointment ID must be greater than 0");
+            }
 
-        service.Delete(id);
-        return NoContent();
+            var deleted = service.Delete(id);
+            if (!deleted)
+            {
+                logger.LogWarning("Delete appointment called for non-existent ID: {Id}", id);
+                return NotFound($"Appointment with Id = {id} was not found.");
+            }
+
+            logger.LogInformation("Successfully deleted appointment {Id}", id);
+            return NoContent();
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error occurred while deleting appointment {Id}", id);
+            return StatusCode(500, "An error occurred while deleting the appointment");
+        }
     }
 }
