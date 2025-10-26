@@ -20,8 +20,3 @@ public record CreateUpdatePatientDto(
     string RhFactor,
     string Phone
 );
-
-
-
-
-

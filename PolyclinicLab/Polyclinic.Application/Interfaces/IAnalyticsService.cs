@@ -51,7 +51,3 @@ public interface IAnalyticsService
     List<AppointmentDto> GetAppointmentsInRoom(int room);
 }
 
-
-
-
-

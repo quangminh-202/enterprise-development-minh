@@ -16,8 +16,3 @@ public record CreateUpdateAppointmentDto(
     int DoctorId,
     int PatientId
 );
-
-
-
-
-

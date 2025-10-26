@@ -8,8 +8,3 @@ namespace Polyclinic.Application.Interfaces;
 /// </summary>
 public interface IPatientService : IApplicationService<PatientDto, CreateUpdatePatientDto, int>
 {}
-
-
-
-
-
