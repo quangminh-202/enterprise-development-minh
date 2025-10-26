@@ -8,7 +8,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Polyclinic.Domain\Polyclinic.Domain.csproj" />
-    <ProjectReference Include="..\Polyclinic.Tests\Polyclinic.Tests.csproj" />
   </ItemGroup>
 
 </Project>

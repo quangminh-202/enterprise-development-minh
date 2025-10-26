@@ -1,4 +1,5 @@
 ﻿using Polyclinic.Domain.Models;
+using Polyclinic.Domain.Interfaces;
 
 namespace Polyclinic.Infrastructure.InMemory;
 
@@ -10,12 +11,13 @@ public class PatientInMemoryRepository : IRepository<Patient, int>
     private readonly List<Patient> _patients = [];
 
     /// <summary>
-    /// Adds a new patient to memory.
+    /// Adds a new patient to memory and returns the created patient with its assigned ID.
     /// </summary>
-    public void Create(Patient entity)
+    public Patient Create(Patient entity)
     {
         entity.Id = _patients.Count == 0 ? 1 : _patients.Max(p => p.Id) + 1;
         _patients.Add(entity);
+        return entity;
     }
 
     /// <summary>
@@ -30,9 +32,9 @@ public class PatientInMemoryRepository : IRepository<Patient, int>
 
 
     /// <summary>
-    /// Updates an existing patient.
+    /// Updates an existing patient and returns the updated patient.
     /// </summary>
-    public void Update(Patient entity)
+    public Patient Update(Patient entity)
     {
         var existing = Read(entity.Id);
         if (existing != null)
@@ -40,14 +42,20 @@ public class PatientInMemoryRepository : IRepository<Patient, int>
             _patients.Remove(existing);
             _patients.Add(entity);
         }
+        return entity;
     }
 
     /// <summary>
-    /// Deletes a patient by ID.
+    /// Deletes a patient by ID. Returns true if deletion was successful, false if patient was not found.
     /// </summary>
-    public void Delete(int id)
+    public bool Delete(int id)
     {
         var patient = Read(id);
-        if (patient != null) _patients.Remove(patient);
+        if (patient != null)
+        {
+            _patients.Remove(patient);
+            return true;
+        }
+        return false;
     }
 }

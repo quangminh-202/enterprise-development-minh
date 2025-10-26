@@ -1,5 +1,6 @@
 ﻿using Polyclinic.Domain.Models;
-using Polyclinic.Tests;
+using Polyclinic.Domain.Interfaces;
+using Polyclinic.Domain.Data;
 
 namespace Polyclinic.Infrastructure.InMemory;
 
@@ -16,16 +17,35 @@ public static class DataSeeder
     {
         var fixture = new PolyclinicFixture();
 
-        // Seed Doctors
+        // Seed Doctors and get them back with IDs
+        var doctors = new List<Doctor>();
         foreach (var d in fixture.Doctors)
-            doctorRepo.Create(d);
+            doctors.Add(doctorRepo.Create(d));
 
-        // Seed Patients
+        // Seed Patients and get them back with IDs
+        var patients = new List<Patient>();
         foreach (var p in fixture.Patients)
-            patientRepo.Create(p);
+            patients.Add(patientRepo.Create(p));
 
         // Seed Appointments
         foreach (var a in fixture.Appointments)
-            appointmentRepo.Create(a);
+        {
+            // Find the actual doctor and patient from the seeded lists
+            var doctor = doctors.First(d => d.Passport == a.Doctor.Passport);
+            var patient = patients.First(p => p.Passport == a.Patient.Passport);
+            
+            // Create a new appointment with proper foreign key references
+            var appointment = new Appointment
+            {
+                Date = a.Date,
+                Room = a.Room,
+                IsRepeated = a.IsRepeated,
+                DoctorId = doctor.Id,
+                PatientId = patient.Id,
+                Doctor = doctor,
+                Patient = patient
+            };
+            appointmentRepo.Create(appointment);
+        }
     }
 }

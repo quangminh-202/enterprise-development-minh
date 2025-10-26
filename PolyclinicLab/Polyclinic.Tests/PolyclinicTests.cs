@@ -1,4 +1,6 @@
-﻿namespace Polyclinic.Tests;
+﻿using Polyclinic.Domain.Data;
+
+namespace Polyclinic.Tests;
 
 /// <summary>
 /// Unit tests for Polyclinic queries.

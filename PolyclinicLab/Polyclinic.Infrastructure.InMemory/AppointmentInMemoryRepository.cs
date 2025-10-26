@@ -1,4 +1,5 @@
 ﻿using Polyclinic.Domain.Models;
+using Polyclinic.Domain.Interfaces;
 
 namespace Polyclinic.Infrastructure.InMemory;
 
@@ -14,12 +15,13 @@ public class AppointmentInMemoryRepository : IRepository<Appointment, int>
     private readonly List<Appointment> _appointments = [];
 
     /// <summary>
-    /// Adds a new appointment to memory.
+    /// Adds a new appointment to memory and returns the created appointment with its assigned ID.
     /// </summary>
-    public void Create(Appointment entity)
+    public Appointment Create(Appointment entity)
     {
         entity.Id = _appointments.Count == 0 ? 1 : _appointments.Max(a => a.Id) + 1;
         _appointments.Add(entity);
+        return entity;
     }
 
     /// <summary>
@@ -33,9 +35,9 @@ public class AppointmentInMemoryRepository : IRepository<Appointment, int>
     public List<Appointment> ReadAll() => [.. _appointments];
 
     /// <summary>
-    /// Updates an existing appointment.
+    /// Updates an existing appointment and returns the updated appointment.
     /// </summary>
-    public void Update(Appointment entity)
+    public Appointment Update(Appointment entity)
     {
         var existing = Read(entity.Id);
         if (existing != null)
@@ -43,15 +45,20 @@ public class AppointmentInMemoryRepository : IRepository<Appointment, int>
             _appointments.Remove(existing);
             _appointments.Add(entity);
         }
+        return entity;
     }
 
     /// <summary>
-    /// Deletes an appointment by ID.
+    /// Deletes an appointment by ID. Returns true if deletion was successful, false if appointment was not found.
     /// </summary>
-    public void Delete(int id)
+    public bool Delete(int id)
     {
         var appointment = Read(id);
         if (appointment != null)
+        {
             _appointments.Remove(appointment);
+            return true;
+        }
+        return false;
     }
 }
