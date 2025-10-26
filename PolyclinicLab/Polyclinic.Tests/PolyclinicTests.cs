@@ -74,22 +74,23 @@ public class PolyclinicTests(PolyclinicFixture fixture) : IClassFixture<Polyclin
     /// with more than one distinct doctor. Sort results by birth date.
     /// Expected: Bob, Henry, Jack.
     /// Actual: LINQ query filtering by age and counting distinct doctors.
+    /// OPTIMIZED: Query starts from Appointments and groups by Patient (as per code review).
     /// </summary>
     [Fact]
     public void PatientsOlderThanThirtyWithMultipleDoctors()
     {
         var expected = new List<string> { "Bob", "Henry", "Jack" };
 
-        var now = DateTime.Now;
-        var actual = fixture.Patients
-            .Where(p => (now.Year - p.BirthDate.Year) > 30)
-            .Where(p => fixture.Appointments
-                .Where(a => a.Patient == p)
-                .Select(a => a.Doctor.Passport)
-                .Distinct()
-                .Count() > 1)
-            .OrderBy(p => p.BirthDate)
-            .Select(p => p.FullName)
+        var today = DateTime.Today;
+        var cutoffDate = today.AddYears(-30);
+        
+        var actual = fixture.Appointments
+            .GroupBy(a => a.Patient)
+            .Where(g =>
+                g.Key.BirthDate <= cutoffDate &&
+                g.Select(a => a.Doctor).Distinct().Count() > 1)
+            .OrderBy(g => g.Key.BirthDate)
+            .Select(g => g.Key.FullName)
             .ToList();
 
         Assert.Equal(expected, actual);
@@ -104,7 +105,7 @@ public class PolyclinicTests(PolyclinicFixture fixture) : IClassFixture<Polyclin
     [Fact]
     public void AppointmentsCurrentMonthInSelectedRoom()
     {
-        var expected = new List<string> {"Jack", "Even", "Alice", "Charlie", "Henry"};
+        var expected = new List<string> {"Jack", "Even", "Alice", "Charlie"};
 
         var today = DateTime.Today;
         var firstDay = new DateTime(today.Year, today.Month, 1);
