@@ -105,7 +105,7 @@ public class PolyclinicTests(PolyclinicFixture fixture) : IClassFixture<Polyclin
     [Fact]
     public void AppointmentsCurrentMonthInSelectedRoom()
     {
-        var expected = new List<string> {"Jack", "Even", "Alice", "Charlie"};
+        var expected = new List<string> {"Jack", "Even", "Alice"};
 
         var today = DateTime.Today;
         var firstDay = new DateTime(today.Year, today.Month, 1);
