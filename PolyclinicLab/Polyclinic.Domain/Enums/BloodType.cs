@@ -18,7 +18,7 @@ public enum BloodType
     /// <summary>
     /// Blood group AB.
     /// </summary>
-    AB,
+    Ab,
 
     /// <summary>
     /// Blood group O.

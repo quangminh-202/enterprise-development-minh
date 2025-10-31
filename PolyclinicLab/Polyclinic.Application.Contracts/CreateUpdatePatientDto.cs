@@ -1,4 +1,5 @@
 namespace Polyclinic.Application.Contracts;
+using System.ComponentModel.DataAnnotations;
 
 /// <summary>
 /// Data Transfer Object (DTO) used for creating and updating patients.
@@ -12,11 +13,11 @@ namespace Polyclinic.Application.Contracts;
 /// <param name="RhFactor">Rh factor of the patient.</param>
 /// <param name="Phone">Contact phone number of the patient.</param>
 public record CreateUpdatePatientDto(
-    string FullName,
-    string Gender,
-    DateTime BirthDate,
-    string Address,
-    string BloodType,
-    string RhFactor,
-    string Phone
+    [Required(ErrorMessage = "Full name is required")] string FullName,
+    [Required(ErrorMessage = "Gender is required")] string Gender,
+    [Required(ErrorMessage = "Birth date is required")] DateTime BirthDate,
+    [Required(ErrorMessage = "Address is required")] string Address,
+    [Required(ErrorMessage = "Blood type is required")] string BloodType,
+    [Required(ErrorMessage = "Rh factor is required")] string RhFactor,
+    [Required(ErrorMessage = "Phone is required")] string Phone
 );

@@ -38,12 +38,12 @@ public class PolyclinicFixture
         [
             new() {Id=1, Passport="P1", FullName="Jack", Gender=Gender.Female, BirthDate=new(1985,1,3), Address="Addr1", BloodType=BloodType.A, RhFactor=RhFactor.Positive, Phone="+79613831297" },
             new() {Id=2, Passport="P2", FullName="Even", Gender=Gender.Male, BirthDate=new(1990,2,2), Address="Addr2", BloodType=BloodType.B, RhFactor=RhFactor.Negative, Phone="+79613831286" },
-            new() {Id=3, Passport="P3", FullName="Henry", Gender=Gender.Male, BirthDate=new(1975,3,18), Address="Addr3", BloodType=BloodType.AB, RhFactor=RhFactor.Positive, Phone="+79613831211" },
+            new() {Id=3, Passport="P3", FullName="Henry", Gender=Gender.Male, BirthDate=new(1975,3,18), Address="Addr3", BloodType=BloodType.Ab, RhFactor=RhFactor.Positive, Phone="+79613831211" },
             new() {Id=4, Passport="P4", FullName="Diana", Gender=Gender.Female, BirthDate=new(2000,4,11), Address="Addr4", BloodType=BloodType.O, RhFactor=RhFactor.Negative, Phone="+79613831213" },
             new() {Id=5, Passport="P5", FullName="Alice", Gender=Gender.Female, BirthDate=new(1982,5,6), Address="Addr5", BloodType=BloodType.B, RhFactor=RhFactor.Positive, Phone="+79613831214" },
             new() {Id=6, Passport="P6", FullName="Frank", Gender=Gender.Male, BirthDate=new(1995,6,12), Address="Addr6", BloodType=BloodType.O, RhFactor=RhFactor.Negative, Phone="+79613831215" },
             new() {Id=7, Passport="P7", FullName="Grace", Gender=Gender.Female, BirthDate=new(1978,10,25), Address="Addr7", BloodType=BloodType.A, RhFactor=RhFactor.Positive, Phone="+79613831216" },
-            new() {Id=8, Passport="P8", FullName="Charlie", Gender=Gender.Male, BirthDate=new(1988,8,15), Address="Addr8", BloodType=BloodType.AB, RhFactor=RhFactor.Negative, Phone="+79613831217" },
+            new() {Id=8, Passport="P8", FullName="Charlie", Gender=Gender.Male, BirthDate=new(1988,8,15), Address="Addr8", BloodType=BloodType.Ab, RhFactor=RhFactor.Negative, Phone="+79613831217" },
             new() {Id=9, Passport="P9", FullName="Ivy", Gender=Gender.Female, BirthDate=new(1993,9,4), Address="Addr9", BloodType=BloodType.O, RhFactor=RhFactor.Positive, Phone="+79613831218" },
             new() {Id=10, Passport="P10", FullName="Bob", Gender=Gender.Male, BirthDate=new(1970,10,23), Address="Addr10", BloodType=BloodType.A, RhFactor=RhFactor.Negative, Phone="+79613831219" }
         ];

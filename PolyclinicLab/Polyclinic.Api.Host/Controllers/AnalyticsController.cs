@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using System.ComponentModel.DataAnnotations;
+using Microsoft.AspNetCore.Mvc;
 using Polyclinic.Application.Contracts;
 using Polyclinic.Application.Interfaces;
 
@@ -15,16 +16,10 @@ public class AnalyticsController(IAnalyticsService analyticsService, ILogger<Ana
     /// (1) Returns all doctors with at least 10 years of experience.
     /// </summary>
     [HttpGet("experienced-doctors")]
-    public ActionResult<List<DoctorDto>> GetExperiencedDoctor([FromQuery] int minExperience = 10)
+    public ActionResult<List<DoctorDto>> GetExperiencedDoctor([FromQuery][Range(0, 100)] int minExperience = 10)
     {
         try
         {
-            if (minExperience < 0 || minExperience > 100)
-            {
-                logger.LogWarning("Invalid minExperience value: {MinExperience}", minExperience);
-                return BadRequest("Experience value must be between 0 and 100.");
-            }
-
             var result = analyticsService.GetExperiencedDoctors(minExperience);
             logger.LogInformation("Retrieved {Count} experienced doctors with min {MinExperience} years", result.Count, minExperience);
             return Ok(result);
@@ -40,19 +35,12 @@ public class AnalyticsController(IAnalyticsService analyticsService, ILogger<Ana
     /// (2) Returns all patients who visited a specific doctor,
     /// ordered alphabetically by full name.
     /// </summary>
-    [HttpGet("patients-by-doctor/{doctorId}")]
+    [HttpGet("patients-by-doctor/{doctorId:int:min(1)}")]
     public ActionResult<List<PatientDto>> GetPatientsByDoctor(int doctorId)
     {
         try
         {
-            if (doctorId <= 0)
-            {
-                logger.LogWarning("Invalid doctor ID provided: {DoctorId}", doctorId);
-                return BadRequest("Doctor ID must be greater than 0");
-            }
-
-            var doctorExists = analyticsService.DoctorExists(doctorId);
-            if (!doctorExists)
+            if (!analyticsService.DoctorExists(doctorId))
             {
                 logger.LogWarning("Doctor with ID {DoctorId} not found", doctorId);
                 return NotFound($"Doctor with ID {doctorId} not found.");
@@ -74,16 +62,11 @@ public class AnalyticsController(IAnalyticsService analyticsService, ILogger<Ana
     /// Default = 1.
     /// </summary>
     [HttpGet("repeated-appointments-count")]
-    public ActionResult<RepeatedAppointmentsAnalyticsDto> GetRepeatedAppointments([FromQuery] int months = 1)
+    public ActionResult<RepeatedAppointmentsAnalyticsDto> GetRepeatedAppointments(
+        [FromQuery][Range(1, 12, ErrorMessage = "The number of months must be between 1 and 12.")] int months = 1)
     {
         try
         {
-            if (months <= 0 || months > 12)
-            {
-                logger.LogWarning("Invalid months parameter: {Months}", months);
-                return BadRequest("The number of months must be between 1 and 12.");
-            }
-
             var result = analyticsService.GetRepeatedAppointments(months);
             logger.LogInformation("Retrieved {Count} repeated appointments within last {Months} months", 
                 result.TotalCount, months);
@@ -102,16 +85,11 @@ public class AnalyticsController(IAnalyticsService analyticsService, ILogger<Ana
     /// who have appointments with more than one distinct doctor.
     /// </summary>
     [HttpGet("patients-older-than-with-multiple-doctors")]
-    public ActionResult<List<PatientAnalyticsDto>> GetPatientsOlderThanWithMultipleDoctors([FromQuery] int age = 30)
+    public ActionResult<List<PatientAnalyticsDto>> GetPatientsOlderThanWithMultipleDoctors(
+        [FromQuery][Range(0, 100, ErrorMessage = "Age must be between 0 and 100.")] int age = 30)
     {
         try
         {
-            if (age < 0 || age > 100)
-            {
-                logger.LogWarning("Invalid age parameter: {Age}", age);
-                return BadRequest("Age must be between 0 and 100.");
-            }
-
             var result = analyticsService.GetPatientsOlderThanWithMultipleDoctors(age);
             logger.LogInformation("Retrieved {Count} patients older than {Age} with multiple doctors", 
                 result.Count, age);
@@ -129,16 +107,11 @@ public class AnalyticsController(IAnalyticsService analyticsService, ILogger<Ana
     /// within the current month.
     /// </summary>
     [HttpGet("appointments-in-room")]
-    public ActionResult<List<AppointmentDto>> GetAppointmentsInRoom([FromQuery] int room = 101)
+    public ActionResult<List<AppointmentDto>> GetAppointmentsInRoom(
+         [FromQuery][Range(1, int.MaxValue, ErrorMessage = "Room number must be greater than 0.")] int room = 101)
     {
         try
         {
-            if (room <= 0)
-            {
-                logger.LogWarning("Invalid room number: {Room}", room);
-                return BadRequest("Room number must be greater than 0");
-            }
-
             var result = analyticsService.GetAppointmentsInRoom(room);
 
             if (result == null || result.Count == 0)

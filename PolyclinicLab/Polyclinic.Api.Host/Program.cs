@@ -25,15 +25,15 @@ builder.Services.AddSingleton<IDoctorService, DoctorService>();
 builder.Services.AddSingleton<IPatientService, PatientService>();
 builder.Services.AddSingleton<IAnalyticsService, AnalyticsService>();
 
+// Register DataSeeder as singleton
+builder.Services.AddSingleton<DataSeeder>();
+
 var app = builder.Build();
 
 using (var scope = app.Services.CreateScope())
 {
-    var doctorRepo = scope.ServiceProvider.GetRequiredService<IRepository<Doctor, int>>();
-    var patientRepo = scope.ServiceProvider.GetRequiredService<IRepository<Patient, int>>();
-    var appointmentRepo = scope.ServiceProvider.GetRequiredService<IRepository<Appointment, int>>();
-
-    DataSeeder.Seed(doctorRepo, patientRepo, appointmentRepo);
+    var seeder = scope.ServiceProvider.GetRequiredService<DataSeeder>();
+    seeder.Seed();
 }
 
 if (app.Environment.IsDevelopment())

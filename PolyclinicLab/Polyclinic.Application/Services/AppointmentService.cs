@@ -22,13 +22,10 @@ public class AppointmentService(
         var appointment = mapper.Map<Appointment>(dto);
         
         // Set Doctor and Patient references
-        var doctor = doctorRepo.Read(dto.DoctorId);
-        var patient = patientRepo.Read(dto.PatientId);
-        
-        if (doctor == null)
-            throw new ArgumentException($"Doctor with ID {dto.DoctorId} not found.");
-        if (patient == null)
-            throw new ArgumentException($"Patient with ID {dto.PatientId} not found.");
+        var doctor = doctorRepo.Read(dto.DoctorId)
+            ?? throw new ArgumentException($"Doctor with ID {dto.DoctorId} not found.");
+        var patient = patientRepo.Read(dto.PatientId)
+            ?? throw new ArgumentException($"Patient with ID {dto.PatientId} not found.");
             
         appointment.Doctor = doctor;
         appointment.Patient = patient;
@@ -39,18 +36,14 @@ public class AppointmentService(
     
     public AppointmentDto Update(int id, CreateUpdateAppointmentDto dto)
     {
-        var existingAppointment = appointmentRepo.Read(id);
-        if (existingAppointment == null)
-            throw new ArgumentException($"Appointment with ID {id} not found.");
+        var existingAppointment = appointmentRepo.Read(id)
+            ?? throw new ArgumentException($"Appointment with ID {id} not found.");
             
         // Set Doctor and Patient references
-        var doctor = doctorRepo.Read(dto.DoctorId);
-        var patient = patientRepo.Read(dto.PatientId);
-        
-        if (doctor == null)
-            throw new ArgumentException($"Doctor with ID {dto.DoctorId} not found.");
-        if (patient == null)
-            throw new ArgumentException($"Patient with ID {dto.PatientId} not found.");
+        var doctor = doctorRepo.Read(dto.DoctorId)
+            ?? throw new ArgumentException($"Doctor with ID {dto.DoctorId} not found.");
+        var patient = patientRepo.Read(dto.PatientId)
+            ?? throw new ArgumentException($"Patient with ID {dto.PatientId} not found.");
             
         mapper.Map(dto, existingAppointment);
         existingAppointment.Doctor = doctor;

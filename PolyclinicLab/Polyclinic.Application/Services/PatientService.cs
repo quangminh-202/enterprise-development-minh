@@ -3,7 +3,6 @@ using Polyclinic.Application.Contracts;
 using Polyclinic.Application.Interfaces;
 using Polyclinic.Domain.Models;
 using Polyclinic.Domain.Interfaces;
-using Polyclinic.Infrastructure.InMemory;
 
 namespace Polyclinic.Application.Services;
 
@@ -22,9 +21,8 @@ public class PatientService(IRepository<Patient, int> repo, IMapper mapper) : IP
     
     public PatientDto Update(int id, CreateUpdatePatientDto dto)
     {
-        var existingPatient = repo.Read(id);
-        if (existingPatient == null)
-            throw new ArgumentException($"Patient with ID {id} not found.");
+        var existingPatient = repo.Read(id)
+           ?? throw new ArgumentException($"Patient with ID {id} not found.");
             
         mapper.Map(dto, existingPatient);
         var updatedPatient = repo.Update(existingPatient);

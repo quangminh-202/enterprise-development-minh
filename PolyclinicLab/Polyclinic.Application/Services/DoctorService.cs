@@ -22,9 +22,8 @@ public class DoctorService(IRepository<Doctor, int> repo, IMapper mapper) : IDoc
    
     public DoctorDto Update(int id, CreateUpdateDoctorDto dto)
     {
-        var existingDoctor = repo.Read(id);
-        if (existingDoctor == null)
-            throw new ArgumentException($"Doctor with ID {id} not found.");
+        var existingDoctor = repo.Read(id)
+            ?? throw new ArgumentException($"Doctor with ID {id} not found.");
             
         mapper.Map(dto, existingDoctor);
         var updatedDoctor = repo.Update(existingDoctor);

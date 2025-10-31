@@ -69,35 +69,22 @@ public class AppointmentController(IAppointmentService service, ILogger<Appointm
     {
         try
         {
-            // Validate input data
             if (dto == null)
             {
                 logger.LogWarning("Create appointment called with null DTO");
                 return BadRequest("Appointment data is required");
             }
 
-            if (dto.Room <= 0)
+            if (!ModelState.IsValid)
             {
-                logger.LogWarning("Create appointment called with invalid room: {Room}", dto.Room);
-                return BadRequest("Room number must be greater than 0");
-            }
-
-            if (dto.DoctorId <= 0)
-            {
-                logger.LogWarning("Create appointment called with invalid doctor ID: {DoctorId}", dto.DoctorId);
-                return BadRequest("Doctor ID must be greater than 0");
-            }
-
-            if (dto.PatientId <= 0)
-            {
-                logger.LogWarning("Create appointment called with invalid patient ID: {PatientId}", dto.PatientId);
-                return BadRequest("Patient ID must be greater than 0");
+                logger.LogWarning("Create appointment validation failed: {Errors}",
+                    string.Join("; ", ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage)));
+                return BadRequest(ModelState);
             }
 
             var createdAppointment = service.Create(dto);
             logger.LogInformation("Successfully created appointment {Id} for doctor {DoctorId} and patient {PatientId}", 
                 createdAppointment.Id, dto.DoctorId, dto.PatientId);
-            
             return CreatedAtAction(nameof(Get), new { id = createdAppointment.Id }, createdAppointment);
         }
         catch (ArgumentException ex)
@@ -122,7 +109,6 @@ public class AppointmentController(IAppointmentService service, ILogger<Appointm
     {
         try
         {
-            // Validate input data
             if (id <= 0)
             {
                 logger.LogWarning("Update appointment called with invalid ID: {Id}", id);
@@ -135,33 +121,21 @@ public class AppointmentController(IAppointmentService service, ILogger<Appointm
                 return BadRequest("Appointment data is required");
             }
 
-            if (dto.Room <= 0)
+            if (!ModelState.IsValid)
             {
-                logger.LogWarning("Update appointment called with invalid room: {Room} for ID: {Id}", dto.Room, id);
-                return BadRequest("Room number must be greater than 0");
-            }
-
-            if (dto.DoctorId <= 0)
-            {
-                logger.LogWarning("Update appointment called with invalid doctor ID: {DoctorId} for ID: {Id}", dto.DoctorId, id);
-                return BadRequest("Doctor ID must be greater than 0");
-            }
-
-            if (dto.PatientId <= 0)
-            {
-                logger.LogWarning("Update appointment called with invalid patient ID: {PatientId} for ID: {Id}", dto.PatientId, id);
-                return BadRequest("Patient ID must be greater than 0");
+                logger.LogWarning("Update appointment validation failed: {Errors} (Id: {Id})",
+                    string.Join("; ", ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage)), id);
+                return BadRequest(ModelState);
             }
 
             var updatedAppointment = service.Update(id, dto);
-
             logger.LogInformation("Successfully updated appointment {Id}", id);
             return Ok(updatedAppointment);
         }
         catch (ArgumentException ex)
         {
             logger.LogWarning(ex, "Validation error while updating appointment {Id}", id);
-            return NotFound(ex.Message);
+            return BadRequest(ex.Message);
         }
         catch (Exception ex)
         {

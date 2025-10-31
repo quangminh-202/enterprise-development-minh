@@ -8,34 +8,40 @@ namespace Polyclinic.Infrastructure.InMemory;
 /// Provides a way to seed in-memory repositories with initial data
 /// from the PolyclinicFixture.
 /// </summary>
-public static class DataSeeder
+/// <remarks>
+/// Register this class as Singleton in the DI container.
+/// </remarks>
+public class DataSeeder(
+    IRepository<Doctor, int> doctorRepo,
+    IRepository<Patient, int> patientRepo,
+    IRepository<Appointment, int> appointmentRepo)
 {
-    public static void Seed(
-        IRepository<Doctor, int> doctorRepo,
-        IRepository<Patient, int> patientRepo,
-        IRepository<Appointment, int> appointmentRepo)
+    /// <summary>
+    /// Seeds the database with initial data.
+    /// </summary>
+    public void Seed()
     {
         var fixture = new PolyclinicFixture();
 
-        // Seed Doctors and get them back with IDs
-        var doctors = new List<Doctor>();
-        foreach (var d in fixture.Doctors)
-            doctors.Add(doctorRepo.Create(d));
+        // Create all doctors in the repository
+        foreach (var doctor in fixture.Doctors)
+            doctorRepo.Create(doctor);
 
-        // Seed Patients and get them back with IDs
-        var patients = new List<Patient>();
-        foreach (var p in fixture.Patients)
-            patients.Add(patientRepo.Create(p));
+        // Create all patients in the repository
+        foreach (var patient in fixture.Patients)
+            patientRepo.Create(patient);
 
-        // Seed Appointments
+        // Create appointments and retrieve related entities from the repositories
         foreach (var a in fixture.Appointments)
         {
-            // Find the actual doctor and patient from the seeded lists
-            var doctor = doctors.First(d => d.Passport == a.Doctor.Passport);
-            var patient = patients.First(p => p.Passport == a.Patient.Passport);
-            
-            // Create a new appointment with proper foreign key references
-            var appointment = new Appointment
+            // Retrieve doctor and patient by their IDs from the repository
+            var doctor = doctorRepo.Read(a.Doctor.Id);
+            var patient = patientRepo.Read(a.Patient.Id);
+            if (doctor is null || patient is null)
+                continue;
+
+            // Create a new appointment with proper references
+            appointmentRepo.Create(new Appointment
             {
                 Date = a.Date,
                 Room = a.Room,
@@ -44,8 +50,7 @@ public static class DataSeeder
                 PatientId = patient.Id,
                 Doctor = doctor,
                 Patient = patient
-            };
-            appointmentRepo.Create(appointment);
+            });
         }
     }
 }
