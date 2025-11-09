@@ -1,0 +1,44 @@
+name: Run Tests
+
+on:
+  push:
+    branches: [ main, master, develop ]
+  pull_request:
+    branches: [ main, master, develop ]
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    services:
+      mongodb:
+        image: mongo:7.0
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "mongosh --eval 'db.adminCommand(\"ping\")'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '8.0.x'
+
+    - name: Restore dependencies
+      run: dotnet restore PolyclinicLab/PolyclinicLab.sln
+
+    - name: Build
+      run: dotnet build PolyclinicLab/PolyclinicLab.sln --no-restore -c Release
+
+    - name: Run tests
+      run: dotnet test PolyclinicLab/PolyclinicLab.sln --no-build -c Release --verbosity normal
+      env:
+        MONGODB_CONNECTION_STRING: mongodb://localhost:27017
+

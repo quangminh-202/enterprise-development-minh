@@ -1,6 +1,7 @@
 ﻿using MongoDB.Driver;
 using Polyclinic.Infrastructure.Mongo.Context;
 using Polyclinic.Infrastructure.Mongo.Repositories;
+using Polyclinic.Infrastructure.Mongo.Migrations;
 
 namespace Polyclinic.Tests;
 
@@ -11,6 +12,9 @@ namespace Polyclinic.Tests;
 /// </summary>
 public class PolyclinicTests
 {
+    private static readonly object _migrationLock = new object();
+    private static bool _migrationsRun = false;
+
     private readonly MongoDbContext _context;
     private readonly DoctorMongoRepository _doctorRepo;
     private readonly AppointmentMongoRepository _appointmentRepo;
@@ -19,10 +23,29 @@ public class PolyclinicTests
     {
         // Use the actual MongoDB database from AppHost
         // This assumes MongoDB is running on localhost (from Aspire or standalone)
-        var mongoClient = new MongoClient("mongodb://localhost:27017");
+        var connectionString = Environment.GetEnvironmentVariable("MONGODB_CONNECTION_STRING") 
+            ?? "mongodb://localhost:27017";
+        var mongoClient = new MongoClient(connectionString);
         _context = new MongoDbContext(mongoClient.GetDatabase("polyclinic"));
         _doctorRepo = new DoctorMongoRepository(_context);
         _appointmentRepo = new AppointmentMongoRepository(_context);
+
+        // Run migrations once before all tests
+        lock (_migrationLock)
+        {
+            if (!_migrationsRun)
+            {
+                var migrations = new IMongoMigration[]
+                {
+                    new Migration_000_CreateCollections(),
+                    new Migration_001_InitIndexes(),
+                    new Migration_002_SeedData()
+                };
+                var migrationRunner = new MigrationRunner(_context, migrations);
+                migrationRunner.RunAsync().GetAwaiter().GetResult();
+                _migrationsRun = true;
+            }
+        }
     }
 
     /// <summary>
