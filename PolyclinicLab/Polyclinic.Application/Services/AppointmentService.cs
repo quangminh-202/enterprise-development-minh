@@ -3,7 +3,6 @@ using Polyclinic.Application.Contracts;
 using Polyclinic.Application.Interfaces;
 using Polyclinic.Domain.Models;
 using Polyclinic.Domain.Interfaces;
-using Polyclinic.Infrastructure.InMemory;
 
 namespace Polyclinic.Application.Services;
 

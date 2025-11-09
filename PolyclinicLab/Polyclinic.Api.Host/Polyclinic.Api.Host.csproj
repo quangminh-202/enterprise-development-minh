@@ -13,8 +13,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Polyclinic.ServiceDefaults\Polyclinic.ServiceDefaults.csproj" />
     <ProjectReference Include="..\Polyclinic.Application\Polyclinic.Application.csproj" />
     <ProjectReference Include="..\Polyclinic.Infrastructure.InMemory\Polyclinic.Infrastructure.InMemory.csproj" />
+    <ProjectReference Include="..\Polyclinic.Infrastructure.Mongo\Polyclinic.Infrastructure.Mongo.csproj" />
   </ItemGroup>
 
 </Project>

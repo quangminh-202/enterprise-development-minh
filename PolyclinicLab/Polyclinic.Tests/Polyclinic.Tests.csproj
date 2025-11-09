@@ -18,7 +18,12 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="MongoDB.Driver" Version="3.5.0" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\Polyclinic.Domain\Polyclinic.Domain.csproj" />
+    <ProjectReference Include="..\Polyclinic.Infrastructure.Mongo\Polyclinic.Infrastructure.Mongo.csproj" />
   </ItemGroup>
 
   <ItemGroup>
