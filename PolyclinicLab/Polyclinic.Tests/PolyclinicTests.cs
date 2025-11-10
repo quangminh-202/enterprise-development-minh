@@ -23,9 +23,7 @@ public class PolyclinicTests
     {
         // Use the actual MongoDB database from AppHost
         // This assumes MongoDB is running on localhost (from Aspire or standalone)
-        var connectionString = Environment.GetEnvironmentVariable("MONGODB_CONNECTION_STRING") 
-            ?? "mongodb://localhost:27017";
-        var mongoClient = new MongoClient(connectionString);
+        var mongoClient = new MongoClient("mongodb://localhost:27017");
         _context = new MongoDbContext(mongoClient.GetDatabase("polyclinic"));
         _doctorRepo = new DoctorMongoRepository(_context);
         _appointmentRepo = new AppointmentMongoRepository(_context);

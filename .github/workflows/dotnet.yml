@@ -48,9 +48,7 @@ jobs:
 
       - name: Run tests (verbose + TRX)
         env:
-          # maps to Configuration.GetConnectionString("polyclinic")
           ConnectionStrings__polyclinic: mongodb://localhost:27017
-          # nếu code của bạn cũng đọc tên DB, đặt riêng DB test:
           Mongo__Database: polyclinic_test
         run: |
           dotnet test ./PolyclinicLab/Polyclinic.Tests/Polyclinic.Tests.csproj \
