@@ -12,7 +12,7 @@ namespace Polyclinic.Tests;
 /// </summary>
 public class PolyclinicTests
 {
-    private static readonly object _migrationLock = new object();
+    private static readonly object _migrationLock = new();
     private static bool _migrationsRun = false;
 
     private readonly MongoDbContext _context;

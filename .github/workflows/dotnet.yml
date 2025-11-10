@@ -2,29 +2,65 @@ name: .NET Tests
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ main, develop ]
   pull_request:
-    branches: [ "main" ]
+    branches: [ main, develop ]
 
 jobs:
+  test:
+    runs-on: ubuntu-latest
 
-  build:
-    runs-on: windows-latest
+    services:
+      mongodb:
+        image: mongo:7.0
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd="mongosh --eval 'db.adminCommand({ ping: 1 })'"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
 
     steps:
-    - name: Checkout
-      uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-    - name: Install .NET
-      uses: actions/setup-dotnet@v4
-      with:
-        dotnet-version: 8.0.x
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
 
-    - name: Restore dependencies
-      run: dotnet restore ./PolyclinicLab/PolyclinicLab.sln
-    - name: Build
-      run: dotnet build --configuration Release --no-restore ./PolyclinicLab/PolyclinicLab.sln
+      - name: Restore
+        run: dotnet restore ./PolyclinicLab/PolyclinicLab.sln
 
-    # Execute all unit tests in the solution
-    - name: Execute unit tests
-      run: dotnet test ./PolyclinicLab/Polyclinic.Tests/Polyclinic.Tests.csproj --configuration Release --verbosity normal
+      - name: Build
+        run: dotnet build ./PolyclinicLab/PolyclinicLab.sln --configuration Release --no-restore
+
+      - name: Wait for MongoDB
+        run: |
+          for i in {1..30}; do
+            nc -z localhost 27017 && echo "MongoDB is up" && exit 0
+            echo "Waiting for MongoDB..."
+            sleep 2
+          done
+          echo "MongoDB not ready in time" >&2
+          exit 1
+
+      - name: Run tests (verbose + TRX)
+        env:
+          # maps to Configuration.GetConnectionString("polyclinic")
+          ConnectionStrings__polyclinic: mongodb://localhost:27017
+          # nếu code của bạn cũng đọc tên DB, đặt riêng DB test:
+          Mongo__Database: polyclinic_test
+        run: |
+          dotnet test ./PolyclinicLab/Polyclinic.Tests/Polyclinic.Tests.csproj \
+            --configuration Release --no-build \
+            --logger "trx;LogFileName=test_results.trx" \
+            --logger "console;verbosity=detailed"
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: '**/TestResults/*.trx'
