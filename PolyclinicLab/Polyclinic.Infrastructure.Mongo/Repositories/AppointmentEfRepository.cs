@@ -40,17 +40,25 @@ public class AppointmentEfRepository(PolyclinicDbContext ctx) : IRepository<Appo
     public List<Appointment> ReadAll()
     {
         var appointments = ctx.Appointments.ToList();
-        var patientIds = appointments.Select(a => a.PatientId).Distinct().ToList();
-        var doctorIds = appointments.Select(a => a.DoctorId).Distinct().ToList();
         
-        var patients = ctx.Patients.Where(p => patientIds.Contains(p.Id)).ToDictionary(p => p.Id);
-        var doctors = ctx.Doctors.Where(d => doctorIds.Contains(d.Id)).ToDictionary(d => d.Id);
-        
-        foreach (var appointment in appointments)
+        // Only load navigation properties if there are appointments
+        if (appointments.Count > 0)
         {
-            appointment.Patient = patients.GetValueOrDefault(appointment.PatientId);
-            appointment.Doctor = doctors.GetValueOrDefault(appointment.DoctorId);
+            var patientIds = appointments.Select(a => a.PatientId).Where(id => id > 0).Distinct().ToList();
+            var doctorIds = appointments.Select(a => a.DoctorId).Where(id => id > 0).Distinct().ToList();
+            
+            var patients = ctx.Patients.Where(p => patientIds.Contains(p.Id)).ToDictionary(p => p.Id);
+            var doctors = ctx.Doctors.Where(d => doctorIds.Contains(d.Id)).ToDictionary(d => d.Id);
+            
+            foreach (var appointment in appointments)
+            {
+                if (appointment.PatientId > 0)
+                    appointment.Patient = patients.GetValueOrDefault(appointment.PatientId);
+                if (appointment.DoctorId > 0)
+                    appointment.Doctor = doctors.GetValueOrDefault(appointment.DoctorId);
+            }
         }
+        
         return appointments;
     }
 
