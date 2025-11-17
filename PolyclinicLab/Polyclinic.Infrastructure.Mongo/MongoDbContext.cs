@@ -7,19 +7,17 @@ namespace Polyclinic.Infrastructure.Mongo;
 /// <summary>
 /// Database context for the Polyclinic system using MongoDB with Entity Framework Core.
 /// </summary>
-public class PolyclinicDbContext : DbContext
+public class PolyclinicDbContext(DbContextOptions options) : DbContext(options)
 {
-    public PolyclinicDbContext(DbContextOptions options) : base(options) { }
-
-    public DbSet<Doctor> Doctors { get; set; }
-    public DbSet<Patient> Patients { get; set; }
-    public DbSet<Appointment> Appointments { get; set; }
+    public DbSet<Doctor> Doctors => Set<Doctor>();
+    public DbSet<Patient> Patients => Set<Patient>();
+    public DbSet<Appointment> Appointments => Set<Appointment>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<Doctor>().ToCollection("Doctors");
         modelBuilder.Entity<Patient>().ToCollection("Patients");
-        
+
         modelBuilder.Entity<Appointment>(entity =>
         {
             entity.ToCollection("Appointments");
