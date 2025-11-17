@@ -1,6 +1,8 @@
 ﻿using MongoDB.Bson;
 using MongoDB.Driver;
-using Polyclinic.Infrastructure.Mongo.Context;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Polyclinic.Infrastructure.Mongo;
 using Microsoft.Extensions.Logging;
 
 namespace Polyclinic.Infrastructure.Mongo.Migrations;
@@ -10,11 +12,11 @@ namespace Polyclinic.Infrastructure.Mongo.Migrations;
 /// Tracks applied migrations in a special "__migrations" collection to prevent duplicate execution.
 /// </summary>
 public sealed class MigrationRunner(
-    MongoDbContext ctx,
+    PolyclinicDbContext ctx,
     IEnumerable<IMongoMigration> migrations,
     ILogger<MigrationRunner>? log = null)
 {
-    private readonly MongoDbContext _ctx = ctx;
+    private readonly PolyclinicDbContext _ctx = ctx;
 
     private readonly IMongoMigration[] _migrations = [.. migrations.OrderBy(m => m.Version)];
 
@@ -22,7 +24,10 @@ public sealed class MigrationRunner(
 
     public async Task RunAsync(CancellationToken ct = default)
     {
-        var col = _ctx.Database.GetCollection<BsonDocument>("__migrations");
+        var mongoClient = _ctx.Database.GetService<IMongoClient>();
+        var database = mongoClient?.GetDatabase("polyclinic") 
+            ?? throw new InvalidOperationException("MongoDB client not configured");
+        var col = database.GetCollection<BsonDocument>("__migrations");
 
         var index = new CreateIndexModel<BsonDocument>(
             Builders<BsonDocument>.IndexKeys.Ascending("v"),

@@ -15,10 +15,24 @@ public class AnalyticsService(
     // (1) Doctors with >=10 years of experience
     public List<DoctorDto> GetExperiencedDoctors(int minExperience)
     {
-        var doctors = doctorRepo.ReadAll()
-            .Where(d => d.Experience >= minExperience)
-            .ToList();
-        return mapper.Map<List<DoctorDto>>(doctors);
+        try
+        {
+            var allDoctors = doctorRepo.ReadAll();
+            Console.WriteLine($"[DEBUG] Total doctors in database: {allDoctors.Count}");
+            
+            var doctors = allDoctors
+                .Where(d => d.Experience >= minExperience)
+                .ToList();
+            
+            Console.WriteLine($"[DEBUG] Doctors with experience >= {minExperience}: {doctors.Count}");
+            return mapper.Map<List<DoctorDto>>(doctors);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[ERROR] GetExperiencedDoctors failed: {ex.Message}");
+            Console.WriteLine($"[ERROR] Stack trace: {ex.StackTrace}");
+            throw;
+        }
     }
 
     public bool DoctorExists(int doctorId)
@@ -33,7 +47,7 @@ public class AnalyticsService(
             .Where(a => a.Doctor.Id == doctorId)
             .Select(a => a.Patient)
             .Distinct()
-            .OrderBy(p => p.FullName)
+            .OrderBy(p => p!.FullName)
             .ToList();
         return mapper.Map<List<PatientDto>>(patients);
     }

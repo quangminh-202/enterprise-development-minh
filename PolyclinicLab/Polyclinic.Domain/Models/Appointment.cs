@@ -39,10 +39,10 @@ public class Appointment
     /// <summary>
     /// The patient attending the appointment.
     /// </summary>
-    public required Patient Patient { get; set; }
+    public Patient? Patient { get; set; }
 
     /// <summary>
     /// The doctor assigned to the appointment.
     /// </summary>
-    public required Doctor Doctor { get; set; }
+    public Doctor? Doctor { get; set; }
 }

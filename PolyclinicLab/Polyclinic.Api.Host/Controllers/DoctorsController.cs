@@ -44,7 +44,7 @@ public class DoctorController(IDoctorService service, ILogger<DoctorController> 
                 logger.LogWarning("Invalid doctor ID provided: {Id}", id);
                 return BadRequest("Doctor ID must be greater than 0");
             }
-
+            
             var doctor = service.Get(id);
             if (doctor == null)
             {

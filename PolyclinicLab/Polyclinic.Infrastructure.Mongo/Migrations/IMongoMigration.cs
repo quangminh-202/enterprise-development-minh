@@ -1,4 +1,4 @@
-﻿using Polyclinic.Infrastructure.Mongo.Context;
+﻿using Polyclinic.Infrastructure.Mongo;
 
 namespace Polyclinic.Infrastructure.Mongo.Migrations;
 
@@ -9,5 +9,6 @@ namespace Polyclinic.Infrastructure.Mongo.Migrations;
 public interface IMongoMigration
 {
     public int Version { get; }
-    public Task Up(MongoDbContext ctx, CancellationToken ct);
+    
+    public Task Up(PolyclinicDbContext ctx, CancellationToken ct);
 }

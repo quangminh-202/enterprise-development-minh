@@ -6,7 +6,8 @@ using Polyclinic.Application.Interfaces;
 namespace Polyclinic.Api.Host.Controllers;
 
 /// <summary>
-/// Provides analytical endpoints that work with live in-memory data (same as CRUD operations).
+/// Provides analytical endpoints for doctors, patients and appointments
+/// using data stored in MongoDB via application services.
 /// </summary>
 [ApiController]
 [Route("api/[controller]")]

@@ -13,7 +13,6 @@
   <ItemGroup>
     <ProjectReference Include="..\Polyclinic.Domain\Polyclinic.Domain.csproj" />
     <ProjectReference Include="..\Polyclinic.Application.Contracts\Polyclinic.Application.Contracts.csproj" />
-    <ProjectReference Include="..\Polyclinic.Infrastructure.Mongo\Polyclinic.Infrastructure.Mongo.csproj" />
   </ItemGroup>
 
 </Project>

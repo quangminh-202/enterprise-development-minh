@@ -1,6 +1,8 @@
 using MongoDB.Bson;
 using MongoDB.Driver;
-using Polyclinic.Infrastructure.Mongo.Context;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Polyclinic.Infrastructure.Mongo;
 
 namespace Polyclinic.Infrastructure.Mongo.Migrations;
 
@@ -13,26 +15,30 @@ public sealed class Migration_000_CreateCollections : IMongoMigration
 {
     public int Version => 0;
 
-    public async Task Up(MongoDbContext ctx, CancellationToken ct)
+    public async Task Up(PolyclinicDbContext ctx, CancellationToken ct)
     {
-        var doctorsExists = await CollectionExistsAsync(ctx.Database, "Doctors", ct);
+        var mongoClient = ctx.Database.GetService<IMongoClient>();
+        var database = mongoClient?.GetDatabase("polyclinic") 
+            ?? throw new InvalidOperationException("MongoDB client not configured");
+        
+        var doctorsExists = await CollectionExistsAsync(database, "Doctors", ct);
         if (!doctorsExists)
         {
-            await ctx.Database.CreateCollectionAsync("Doctors", cancellationToken: ct);
+            await database.CreateCollectionAsync("Doctors", cancellationToken: ct);
             Console.WriteLine("Collection 'Doctors' created.");
         }
 
-        var patientsExists = await CollectionExistsAsync(ctx.Database, "Patients", ct);
+        var patientsExists = await CollectionExistsAsync(database, "Patients", ct);
         if (!patientsExists)
         {
-            await ctx.Database.CreateCollectionAsync("Patients", cancellationToken: ct);
+            await database.CreateCollectionAsync("Patients", cancellationToken: ct);
             Console.WriteLine("Collection 'Patients' created.");
         }
 
-        var appointmentsExists = await CollectionExistsAsync(ctx.Database, "Appointments", ct);
+        var appointmentsExists = await CollectionExistsAsync(database, "Appointments", ct);
         if (!appointmentsExists)
         {
-            await ctx.Database.CreateCollectionAsync("Appointments", cancellationToken: ct);
+            await database.CreateCollectionAsync("Appointments", cancellationToken: ct);
             Console.WriteLine("Collection 'Appointments' created.");
         }
 

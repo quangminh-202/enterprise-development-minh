@@ -7,6 +7,8 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Aspire.MongoDB.Driver" Version="9.0.0" />
+    <PackageReference Include="MongoDB.Driver" Version="2.30.0" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
     <PackageReference Include="AutoMapper" Version="12.0.1" />
     <PackageReference Include="AutoMapper.Extensions.Microsoft.DependencyInjection" Version="12.0.1" />
@@ -15,7 +17,6 @@
   <ItemGroup>
     <ProjectReference Include="..\Polyclinic.ServiceDefaults\Polyclinic.ServiceDefaults.csproj" />
     <ProjectReference Include="..\Polyclinic.Application\Polyclinic.Application.csproj" />
-    <ProjectReference Include="..\Polyclinic.Infrastructure.InMemory\Polyclinic.Infrastructure.InMemory.csproj" />
     <ProjectReference Include="..\Polyclinic.Infrastructure.Mongo\Polyclinic.Infrastructure.Mongo.csproj" />
   </ItemGroup>
 

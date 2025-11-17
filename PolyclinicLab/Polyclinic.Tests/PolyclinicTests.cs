@@ -1,56 +1,71 @@
-﻿using MongoDB.Driver;
-using Polyclinic.Infrastructure.Mongo.Context;
+﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using Polyclinic.Infrastructure.Mongo;
 using Polyclinic.Infrastructure.Mongo.Repositories;
-using Polyclinic.Infrastructure.Mongo.Migrations;
+using Polyclinic.Domain.Models;
 
 namespace Polyclinic.Tests;
 
-/// <summary>
-/// Integration tests for Polyclinic queries using MongoDB.
-/// Each test compares hard-coded expected results (based on seeded data from migrations)
-/// with actual results from LINQ queries over MongoDB collections.
-/// </summary>
 public class PolyclinicTests
 {
-    private static readonly object _migrationLock = new();
-    private static bool _migrationsRun = false;
-
-    private readonly MongoDbContext _context;
-    private readonly DoctorMongoRepository _doctorRepo;
-    private readonly AppointmentMongoRepository _appointmentRepo;
+    private readonly PolyclinicDbContext _context;
+    private readonly DoctorEfRepository _doctorRepo;
+    private readonly PatientEfRepository _patientRepo;
+    private readonly AppointmentEfRepository _appointmentRepo;
 
     public PolyclinicTests()
     {
-        // Use the actual MongoDB database from AppHost
-        // This assumes MongoDB is running on localhost (from Aspire or standalone)
-        var mongoClient = new MongoClient("mongodb://localhost:27017");
-        _context = new MongoDbContext(mongoClient.GetDatabase("polyclinic"));
-        _doctorRepo = new DoctorMongoRepository(_context);
-        _appointmentRepo = new AppointmentMongoRepository(_context);
+        // Create in-memory DI container
+        var services = new ServiceCollection();
 
-        // Run migrations once before all tests
-        lock (_migrationLock)
+        // Register EF Core MongoDB Context
+        services.AddDbContext<PolyclinicDbContext>(options =>
         {
-            if (!_migrationsRun)
-            {
-                var migrations = new IMongoMigration[]
-                {
-                    new Migration_000_CreateCollections(),
-                    new Migration_001_InitIndexes(),
-                    new Migration_002_SeedData()
-                };
-                var migrationRunner = new MigrationRunner(_context, migrations);
-                migrationRunner.RunAsync().GetAwaiter().GetResult();
-                _migrationsRun = true;
-            }
-        }
+            options.UseMongoDB("mongodb://localhost:27017", "polyclinic_test");
+        });
+
+        // Register repositories
+        services.AddScoped<DoctorEfRepository>();
+        services.AddScoped<PatientEfRepository>();
+        services.AddScoped<AppointmentEfRepository>();
+
+        // Build provider
+        var provider = services.BuildServiceProvider();
+
+        _context = provider.GetRequiredService<PolyclinicDbContext>();
+        _doctorRepo = provider.GetRequiredService<DoctorEfRepository>();
+        _patientRepo = provider.GetRequiredService<PatientEfRepository>();
+        _appointmentRepo = provider.GetRequiredService<AppointmentEfRepository>();
+        
+        // Seed test data
+        SeedTestData();
+    }
+    
+    private void SeedTestData()
+    {
+        // Clear existing data
+        var existingAppointments = _context.Appointments.ToList();
+        _context.Appointments.RemoveRange(existingAppointments);
+        
+        var existingDoctors = _context.Doctors.ToList();
+        _context.Doctors.RemoveRange(existingDoctors);
+        
+        var existingPatients = _context.Patients.ToList();
+        _context.Patients.RemoveRange(existingPatients);
+        
+        _context.SaveChanges();
+        
+        // Add test data
+        var fixture = new Polyclinic.Domain.Data.PolyclinicFixture();
+        
+        _context.Doctors.AddRange(fixture.Doctors);
+        _context.Patients.AddRange(fixture.Patients);
+        _context.SaveChanges();
+        
+        _context.Appointments.AddRange(fixture.Appointments);
+        _context.SaveChanges();
     }
 
-    /// <summary>
-    /// (1) Verify that all doctors with at least 10 years of experience are returned.
-    /// Expected: six doctors (Charlie, Bravo, Alpha, Foxtrot, Golf, Hotel).
-    /// Actual: LINQ query filtering doctors by Experience >= 10.
-    /// </summary>
     [Fact]
     public void DoctorsWithTenYearsExperience()
     {
@@ -67,52 +82,46 @@ public class PolyclinicTests
         Assert.Equal(expected, actual);
     }
 
-    /// <summary>
-    /// (2) Verify that all patients who visited Dr. Bravo (D2) are returned,
-    /// sorted alphabetically by full name.
-    /// Expected: Bob, Even, Henry, Jack.
-    /// Actual: LINQ query filtering Appointments by doctor passport "D2".
-    /// </summary>
     [Fact]
     public void PatientsByDoctorSortedByName()
     {
         var expected = new List<string> { "Bob", "Even", "Henry", "Jack" };
 
-        var actual = _appointmentRepo.ReadAll()
-            .Where(a => a.Doctor.Passport == "D2")
-            .Select(a => a.Patient.FullName)
+        // Find doctor with passport D2
+        var doctor = _doctorRepo.ReadAll().FirstOrDefault(d => d.Passport == "D2");
+        Assert.NotNull(doctor);
+
+        // Get patient IDs from appointments
+        var patientIds = _appointmentRepo.ReadAll()
+            .Where(a => a.DoctorId == doctor.Id)
+            .Select(a => a.PatientId)
+            .Distinct()
+            .ToList();
+
+        // Get patient names
+        var actual = _patientRepo.ReadAll()
+            .Where(p => patientIds.Contains(p.Id))
+            .Select(p => p.FullName)
             .OrderBy(n => n)
             .ToList();
 
         Assert.Equal(expected, actual);
     }
 
-    /// <summary>
-    /// (3) Count all repeated appointments (IsRepeated = true)
-    /// that took place within the last month.
-    /// Expected: 3 (Bob, Diana, Frank).
-    /// Actual: LINQ query counting appointments by date range and IsRepeated flag.
-    /// </summary>
     [Fact]
     public void CountRepeatedAppointmentsLastMonth()
     {
-        var expected = 3; // Even(-15), Diana(-5), Frank(-1)
+        var expected = 3;
 
         var now = DateTime.Now;
         var oneMonthAgo = now.AddMonths(-1);
+
         var actual = _appointmentRepo.ReadAll()
             .Count(a => a.IsRepeated && a.Date >= oneMonthAgo && a.Date <= now);
 
         Assert.Equal(expected, actual);
     }
 
-    /// <summary>
-    /// (4) Return all patients older than 30 years who have appointments
-    /// with more than one distinct doctor. Sort results by birth date.
-    /// Expected: (empty list - no patients match the criteria)
-    /// Actual: LINQ query filtering by age and counting distinct doctors.
-    /// OPTIMIZED: Query starts from Appointments and groups by Patient (as per code review).
-    /// </summary>
     [Fact]
     public void PatientsOlderThanThirtyWithMultipleDoctors()
     {
@@ -120,40 +129,48 @@ public class PolyclinicTests
 
         var today = DateTime.Today;
         var cutoffDate = today.AddYears(-30);
-        
-        var actual = _appointmentRepo.ReadAll()
-            .GroupBy(a => a.Patient.Passport) // Group by Passport instead of Patient object
-            .Where(g =>
-            {
-                var patient = g.First().Patient; // Get patient from first appointment in group
-                return patient.BirthDate <= cutoffDate &&
-                       g.Select(a => a.Doctor.Passport).Distinct().Count() > 1;
-            })
-            .OrderBy(g => g.First().Patient.BirthDate)
-            .Select(g => g.First().Patient.FullName)
+
+        // Get patients with multiple doctors
+        var patientAppointments = _appointmentRepo.ReadAll()
+            .GroupBy(a => a.PatientId)
+            .Where(g => g.Select(a => a.DoctorId).Distinct().Count() > 1)
+            .Select(g => g.Key)
+            .ToList();
+
+        // Filter by age and sort
+        var actual = _patientRepo.ReadAll()
+            .Where(p => p.BirthDate <= cutoffDate && patientAppointments.Contains(p.Id))
+            .OrderBy(p => p.BirthDate)
+            .Select(p => p.FullName)
             .ToList();
 
         Assert.Equal(expected, actual);
     }
 
-    /// <summary>
-    /// (5) Return all appointments scheduled in room "101"
-    /// within the current month. Select patient names.
-    /// Expected: Alice, Charlie, Henry.
-    /// Actual: LINQ query filtering by room and date range.
-    /// </summary>
     [Fact]
     public void AppointmentsCurrentMonthInSelectedRoom()
     {
-        var expected = new List<string> {"Alice", "Charlie", "Henry"};
+        // Expected: appointments in room 101 in current month
+        // Based on fixture: Id=2 (Even, -15 days), Id=5 (Alice, -2 days), 
+        // Id=8 (Charlie, +1 day), Id=13 (Henry, +6 days)
+        // Id=1 (Jack, -20 days) may be in previous month depending on current date
+        var expected = new List<string> { "Alice", "Charlie", "Even", "Henry" };
 
         var today = DateTime.Today;
-        var firstDay = new DateTime(today.Year, today.Month, 1);
-        var lastDay = firstDay.AddMonths(1).AddDays(-1);
-        var allAppointments = _appointmentRepo.ReadAll();
-        var actual = allAppointments
-            .Where(a => a.Date >= firstDay && a.Date <= lastDay && a.Room == 101)
-            .Select(a => a.Patient.FullName)
+        var first = new DateTime(today.Year, today.Month, 1);
+        var last = first.AddMonths(1).AddDays(-1);
+
+        // Get patient IDs from appointments in room 101 this month
+        var patientIds = _appointmentRepo.ReadAll()
+            .Where(a => a.Date >= first && a.Date <= last && a.Room == 101)
+            .Select(a => a.PatientId)
+            .ToList();
+
+        // Get patient names
+        var actual = _patientRepo.ReadAll()
+            .Where(p => patientIds.Contains(p.Id))
+            .Select(p => p.FullName)
+            .OrderBy(n => n)
             .ToList();
 
         Assert.Equal(expected, actual);

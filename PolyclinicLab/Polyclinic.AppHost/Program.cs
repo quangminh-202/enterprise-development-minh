@@ -5,7 +5,8 @@ var mongo = builder.AddMongoDB("mongodb")
                    .AddDatabase("polyclinic");
 
 builder.AddProject<Projects.Polyclinic_Api_Host>("api")
-       .WithReference(mongo)   
+       .WithReference(mongo)
+       .WaitFor(mongo)
        .WithExternalHttpEndpoints();
 
 builder.Build().Run();
