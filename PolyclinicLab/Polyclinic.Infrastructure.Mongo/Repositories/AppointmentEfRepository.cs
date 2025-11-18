@@ -1,5 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
-using Polyclinic.Domain.Interfaces;
+﻿using Polyclinic.Domain.Interfaces;
 using Polyclinic.Domain.Models;
 
 namespace Polyclinic.Infrastructure.Mongo.Repositories;
@@ -41,7 +40,6 @@ public class AppointmentEfRepository(PolyclinicDbContext ctx) : IRepository<Appo
     {
         var appointments = ctx.Appointments.ToList();
         
-        // Only load navigation properties if there are appointments
         if (appointments.Count > 0)
         {
             var patientIds = appointments.Select(a => a.PatientId).Where(id => id > 0).Distinct().ToList();

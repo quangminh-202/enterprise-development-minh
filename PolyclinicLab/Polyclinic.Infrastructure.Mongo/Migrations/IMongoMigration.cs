@@ -1,6 +1,4 @@
-﻿using Polyclinic.Infrastructure.Mongo;
-
-namespace Polyclinic.Infrastructure.Mongo.Migrations;
+﻿namespace Polyclinic.Infrastructure.Mongo.Migrations;
 
 /// <summary>
 /// Interface for MongoDB database migrations.

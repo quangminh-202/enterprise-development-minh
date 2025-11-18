@@ -2,7 +2,6 @@
 using MongoDB.Driver;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
-using Polyclinic.Infrastructure.Mongo;
 using Microsoft.Extensions.Logging;
 
 namespace Polyclinic.Infrastructure.Mongo.Migrations;
