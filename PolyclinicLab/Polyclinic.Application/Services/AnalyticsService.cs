@@ -44,7 +44,7 @@ public class AnalyticsService(
     public List<PatientDto> GetPatientsByDoctor(int doctorId)
     {
         var patients = appointmentRepo.ReadAll()
-            .Where(a => a.Doctor.Id == doctorId)
+            .Where(a => a.Doctor?.Id == doctorId)
             .Select(a => a.Patient)
             .Distinct()
             .OrderBy(p => p!.FullName)
@@ -73,22 +73,23 @@ public class AnalyticsService(
         var today = DateTime.Today;
         var cutoffDate = today.AddYears(-age);
         var result = appointmentRepo.ReadAll()
-            .GroupBy(a => a.Patient.Id)
+            .Where(a => a.Patient != null && a.Doctor != null)
+            .GroupBy(a => a.Patient?.Id)
             .Where(g =>
             {
                 var patient = g.First().Patient;
-                return patient.BirthDate <= cutoffDate &&
-                       g.Select(a => a.Doctor.Id).Distinct().Count() > 1;
+                return patient?.BirthDate <= cutoffDate &&
+                       g.Select(a => a.Doctor?.Id).Distinct().Count() > 1;
             })
-            .OrderBy(g => g.First().Patient.BirthDate)
+            .OrderBy(g => g.First().Patient?.BirthDate)
             .Select(g =>
             {
-                var patient = g.First().Patient;
+                var patient = g.First().Patient!;
                 return new PatientAnalyticsDto(
                     patient.Id,
                     patient.FullName,
                     GetAge(patient.BirthDate, today),
-                    g.Select(a => a.Doctor.Id).Distinct().Count()
+                    g.Select(a => a.Doctor?.Id).Distinct().Count()
                 );
             })
             .ToList();

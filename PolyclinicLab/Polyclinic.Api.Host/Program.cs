@@ -19,7 +19,7 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddAutoMapper(typeof(AppointmentMappingProfile));
 
 // Register MongoDB Client with Aspire integration
-builder.AddMongoDBClient("mongodb");
+builder.AddMongoDBClient("polyclinic");
 
 // Register DbContext with EF Core
 builder.Services.AddDbContext<PolyclinicDbContext>((serviceProvider, options) =>

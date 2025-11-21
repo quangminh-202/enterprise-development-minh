@@ -16,8 +16,6 @@ public class DoctorMappingProfile : Profile
 
         // CreateUpdateDoctorDto -> Doctor
         CreateMap<CreateUpdateDoctorDto, Doctor>()
-            .ForMember(dest => dest.Id, opt => opt.Ignore())
-            .ForMember(dest => dest.Passport, opt => opt.Ignore())
-            .ForMember(dest => dest.BirthYear, opt => opt.Ignore());
+            .ForMember(dest => dest.Id, opt => opt.Ignore());
     }
 }
