@@ -15,24 +15,10 @@ public class AnalyticsService(
     // (1) Doctors with >=10 years of experience
     public List<DoctorDto> GetExperiencedDoctors(int minExperience)
     {
-        try
-        {
-            var allDoctors = doctorRepo.ReadAll();
-            Console.WriteLine($"[DEBUG] Total doctors in database: {allDoctors.Count}");
-            
-            var doctors = allDoctors
-                .Where(d => d.Experience >= minExperience)
-                .ToList();
-            
-            Console.WriteLine($"[DEBUG] Doctors with experience >= {minExperience}: {doctors.Count}");
-            return mapper.Map<List<DoctorDto>>(doctors);
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"[ERROR] GetExperiencedDoctors failed: {ex.Message}");
-            Console.WriteLine($"[ERROR] Stack trace: {ex.StackTrace}");
-            throw;
-        }
+        var doctors = doctorRepo.ReadAll()
+            .Where(d => d.Experience >= minExperience)
+            .ToList();
+        return mapper.Map<List<DoctorDto>>(doctors);
     }
 
     public bool DoctorExists(int doctorId)
@@ -44,11 +30,10 @@ public class AnalyticsService(
     public List<PatientDto> GetPatientsByDoctor(int doctorId)
     {
         var patients = appointmentRepo.ReadAll()
-            .Where(a => a.Doctor?.Id == doctorId)
+            .Where(a => a.DoctorId == doctorId)
             .Select(a => a.Patient)
             .Distinct()
-            .OrderBy(p => p!.FullName)
-            .ToList();
+            .OrderBy(p => p!.FullName);
         return mapper.Map<List<PatientDto>>(patients);
     }
 
@@ -72,16 +57,17 @@ public class AnalyticsService(
     {
         var today = DateTime.Today;
         var cutoffDate = today.AddYears(-age);
-        var result = appointmentRepo.ReadAll()
+        
+        return appointmentRepo.ReadAll()
             .Where(a => a.Patient != null && a.Doctor != null)
-            .GroupBy(a => a.Patient?.Id)
+            .GroupBy(a => a.Patient!.Id)
             .Where(g =>
             {
                 var patient = g.First().Patient;
                 return patient?.BirthDate <= cutoffDate &&
-                       g.Select(a => a.Doctor?.Id).Distinct().Count() > 1;
+                       g.Select(a => a.Doctor!.Id).Distinct().Count() > 1;
             })
-            .OrderBy(g => g.First().Patient?.BirthDate)
+            .OrderBy(g => g.First().Patient!.BirthDate)
             .Select(g =>
             {
                 var patient = g.First().Patient!;
@@ -89,11 +75,10 @@ public class AnalyticsService(
                     patient.Id,
                     patient.FullName,
                     GetAge(patient.BirthDate, today),
-                    g.Select(a => a.Doctor?.Id).Distinct().Count()
+                    g.Select(a => a.Doctor!.Id).Distinct().Count()
                 );
             })
             .ToList();
-        return result;
     }
 
     // Accurate age calculation considering birthday/month

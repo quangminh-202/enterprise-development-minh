@@ -8,20 +8,13 @@ namespace Polyclinic.Application.MappingProfiles;
 /// AutoMapper profile for mapping between Appointment domain model and DTOs
 /// </summary>
 public class AppointmentMappingProfile : Profile
-{
+{   
     public AppointmentMappingProfile()
     {
         // Appointment -> AppointmentDto
         CreateMap<Appointment, AppointmentDto>()
-            .ConstructUsing(src => new AppointmentDto(
-                src.Id,
-                src.Date,
-                src.Room,
-                src.IsRepeated,
-                src.Doctor != null ? src.Doctor.FullName : string.Empty,
-                src.Patient != null ? src.Patient.FullName : string.Empty
-            ))
-            .DisableCtorValidation(); // Allow mapping despite constructor requirements
+            .ForCtorParam("DoctorName", opt => opt.MapFrom(src => src.Doctor != null ? src.Doctor.FullName : string.Empty))
+            .ForCtorParam("PatientName", opt => opt.MapFrom(src => src.Patient != null ? src.Patient.FullName : string.Empty));
 
         // CreateUpdateAppointmentDto -> Appointment
         CreateMap<CreateUpdateAppointmentDto, Appointment>()

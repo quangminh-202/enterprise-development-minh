@@ -21,6 +21,8 @@ public class PolyclinicDbContext(DbContextOptions options) : DbContext(options)
         modelBuilder.Entity<Appointment>(entity =>
         {
             entity.ToCollection("Appointments");
+            entity.Property(a => a.PatientId).IsRequired();
+            entity.Property(a => a.DoctorId).IsRequired();
             entity.Ignore(a => a.Patient);
             entity.Ignore(a => a.Doctor);
         });

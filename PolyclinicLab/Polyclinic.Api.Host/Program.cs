@@ -18,7 +18,7 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddAutoMapper(typeof(AppointmentMappingProfile));
 
-// Register MongoDB Client with Aspire integration
+// Register MongoDB Client - support both Aspire and standalone
 builder.AddMongoDBClient("polyclinic");
 
 // Register DbContext with EF Core
@@ -49,6 +49,9 @@ var app = builder.Build();
 
 using (var scope = app.Services.CreateScope())
 {
+    var dbContext = scope.ServiceProvider.GetRequiredService<PolyclinicDbContext>();
+    dbContext.Database.AutoTransactionBehavior = Microsoft.EntityFrameworkCore.AutoTransactionBehavior.Never;
+    
     var migrationRunner = scope.ServiceProvider.GetRequiredService<MigrationRunner>();
     await migrationRunner.RunAsync();
 }

@@ -1,4 +1,5 @@
-﻿using Polyclinic.Domain.Interfaces;
+﻿using Microsoft.EntityFrameworkCore;
+using Polyclinic.Domain.Interfaces;
 using Polyclinic.Domain.Models;
 
 namespace Polyclinic.Infrastructure.Mongo.Repositories;
@@ -27,11 +28,22 @@ public class AppointmentEfRepository(PolyclinicDbContext ctx) : IRepository<Appo
 
     public Appointment? Read(int id)
     {
-        var appointment = ctx.Appointments.FirstOrDefault(a => a.Id == id);
+        // Try using Include first (may not work with MongoDB provider)
+        var appointment = ctx.Appointments
+            .Where(a => a.Id == id)
+            .FirstOrDefault();
+            
         if (appointment != null)
         {
-            appointment.Patient = ctx.Patients.FirstOrDefault(p => p.Id == appointment.PatientId)!;
-            appointment.Doctor = ctx.Doctors.FirstOrDefault(d => d.Id == appointment.DoctorId)!;
+            // Manually load navigation properties
+            if (appointment.PatientId > 0)
+            {
+                appointment.Patient = ctx.Patients.FirstOrDefault(p => p.Id == appointment.PatientId);
+            }
+            if (appointment.DoctorId > 0)
+            {
+                appointment.Doctor = ctx.Doctors.FirstOrDefault(d => d.Id == appointment.DoctorId);
+            }
         }
         return appointment;
     }
@@ -42,18 +54,26 @@ public class AppointmentEfRepository(PolyclinicDbContext ctx) : IRepository<Appo
         
         if (appointments.Count > 0)
         {
-            var patientIds = appointments.Select(a => a.PatientId).Where(id => id > 0).Distinct().ToList();
-            var doctorIds = appointments.Select(a => a.DoctorId).Where(id => id > 0).Distinct().ToList();
+            // Get all patients and doctors from DB
+            var allPatients = ctx.Patients.ToList();
+            var allDoctors = ctx.Doctors.ToList();
             
-            var patients = ctx.Patients.Where(p => patientIds.Contains(p.Id)).ToDictionary(p => p.Id);
-            var doctors = ctx.Doctors.Where(d => doctorIds.Contains(d.Id)).ToDictionary(d => d.Id);
+            // Create dictionaries for fast lookup
+            var patientDict = allPatients.ToDictionary(p => p.Id);
+            var doctorDict = allDoctors.ToDictionary(d => d.Id);
             
+            // Manually assign navigation properties (EF Core MongoDB provider doesn't auto-load them)
             foreach (var appointment in appointments)
             {
-                if (appointment.PatientId > 0)
-                    appointment.Patient = patients.GetValueOrDefault(appointment.PatientId);
-                if (appointment.DoctorId > 0)
-                    appointment.Doctor = doctors.GetValueOrDefault(appointment.DoctorId);
+                if (appointment.PatientId > 0 && patientDict.ContainsKey(appointment.PatientId))
+                {
+                    appointment.Patient = patientDict[appointment.PatientId];
+                }
+                
+                if (appointment.DoctorId > 0 && doctorDict.ContainsKey(appointment.DoctorId))
+                {
+                    appointment.Doctor = doctorDict[appointment.DoctorId];
+                }
             }
         }
         
