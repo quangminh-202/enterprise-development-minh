@@ -11,6 +11,7 @@ using Microsoft.EntityFrameworkCore;
 using Polyclinic.Infrastructure.Mongo;
 
 var builder = WebApplication.CreateBuilder(args);
+//try commit lab4
 
 builder.AddServiceDefaults();
 builder.Services.AddControllers();
