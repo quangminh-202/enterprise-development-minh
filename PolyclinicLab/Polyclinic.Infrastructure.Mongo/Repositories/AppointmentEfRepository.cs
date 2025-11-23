@@ -28,56 +28,37 @@ public class AppointmentEfRepository(PolyclinicDbContext ctx) : IRepository<Appo
 
     public Appointment? Read(int id)
     {
-        // Try using Include first (may not work with MongoDB provider)
-        var appointment = ctx.Appointments
-            .Where(a => a.Id == id)
-            .FirstOrDefault();
-            
+        var appointment = ctx.Appointments.FirstOrDefault(a => a.Id == id);
         if (appointment != null)
-        {
-            // Manually load navigation properties
-            if (appointment.PatientId > 0)
-            {
-                appointment.Patient = ctx.Patients.FirstOrDefault(p => p.Id == appointment.PatientId);
-            }
-            if (appointment.DoctorId > 0)
-            {
-                appointment.Doctor = ctx.Doctors.FirstOrDefault(d => d.Id == appointment.DoctorId);
-            }
-        }
+            LoadNavigationProperties(appointment);
         return appointment;
     }
 
     public List<Appointment> ReadAll()
     {
         var appointments = ctx.Appointments.ToList();
-        
-        if (appointments.Count > 0)
+        if (appointments.Count == 0) return appointments;
+
+        var patientDict = ctx.Patients.ToList().ToDictionary(p => p.Id);
+        var doctorDict = ctx.Doctors.ToList().ToDictionary(d => d.Id);
+
+        foreach (var appointment in appointments)
         {
-            // Get all patients and doctors from DB
-            var allPatients = ctx.Patients.ToList();
-            var allDoctors = ctx.Doctors.ToList();
-            
-            // Create dictionaries for fast lookup
-            var patientDict = allPatients.ToDictionary(p => p.Id);
-            var doctorDict = allDoctors.ToDictionary(d => d.Id);
-            
-            // Manually assign navigation properties (EF Core MongoDB provider doesn't auto-load them)
-            foreach (var appointment in appointments)
-            {
-                if (appointment.PatientId > 0 && patientDict.ContainsKey(appointment.PatientId))
-                {
-                    appointment.Patient = patientDict[appointment.PatientId];
-                }
-                
-                if (appointment.DoctorId > 0 && doctorDict.ContainsKey(appointment.DoctorId))
-                {
-                    appointment.Doctor = doctorDict[appointment.DoctorId];
-                }
-            }
+            if (patientDict.TryGetValue(appointment.PatientId, out var patient))
+                appointment.Patient = patient;
+            if (doctorDict.TryGetValue(appointment.DoctorId, out var doctor))
+                appointment.Doctor = doctor;
         }
-        
+
         return appointments;
+    }
+
+    private void LoadNavigationProperties(Appointment appointment)
+    {
+        if (appointment.PatientId > 0)
+            appointment.Patient = ctx.Patients.FirstOrDefault(p => p.Id == appointment.PatientId);
+        if (appointment.DoctorId > 0)
+            appointment.Doctor = ctx.Doctors.FirstOrDefault(d => d.Id == appointment.DoctorId);
     }
 
     public Appointment Update(Appointment entity)

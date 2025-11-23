@@ -25,10 +25,10 @@ public class PatientEfRepository(PolyclinicDbContext ctx) : IRepository<Patient,
         return entity;
     }
 
-    public Patient? Read(int id) =>
+    public Patient? Read(int id) => 
         ctx.Patients.FirstOrDefault(p => p.Id == id);
 
-    public List<Patient> ReadAll() =>[.. ctx.Patients];
+    public List<Patient> ReadAll() => [.. ctx.Patients];
 
     public Patient Update(Patient entity)
     {

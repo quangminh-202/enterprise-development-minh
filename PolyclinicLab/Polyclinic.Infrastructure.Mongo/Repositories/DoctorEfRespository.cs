@@ -25,7 +25,7 @@ public class DoctorEfRepository(PolyclinicDbContext ctx) : IRepository<Doctor, i
         return entity;
     }
 
-    public Doctor? Read(int id) =>
+    public Doctor? Read(int id) => 
         ctx.Doctors.FirstOrDefault(d => d.Id == id);
 
     public List<Doctor> ReadAll() => [.. ctx.Doctors];
