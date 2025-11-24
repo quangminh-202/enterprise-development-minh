@@ -9,9 +9,9 @@ using Polyclinic.ServiceDefaults;
 using MongoDB.Driver;
 using Microsoft.EntityFrameworkCore;
 using Polyclinic.Infrastructure.Mongo;
+using Polyclinic.Infrastructure.Nats;
 
 var builder = WebApplication.CreateBuilder(args);
-//try commit lab4
 
 builder.AddServiceDefaults();
 builder.Services.AddControllers();
@@ -45,6 +45,10 @@ builder.Services.AddTransient<IMongoMigration, Migration_000_CreateCollections>(
 builder.Services.AddTransient<IMongoMigration, Migration_001_InitIndexes>();
 builder.Services.AddTransient<IMongoMigration, Migration_002_SeedData>();
 builder.Services.AddScoped<MigrationRunner>();
+
+// Register NATS Consumer Service
+builder.AddNatsClient("polyclinic-nats");
+builder.Services.AddHostedService<PolyclinicNatsConsumer>();
 
 var app = builder.Build();
 
