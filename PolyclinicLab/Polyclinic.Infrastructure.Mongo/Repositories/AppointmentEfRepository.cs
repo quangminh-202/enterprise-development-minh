@@ -1,5 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
-using Polyclinic.Domain.Interfaces;
+﻿using Polyclinic.Domain.Interfaces;
 using Polyclinic.Domain.Models;
 
 namespace Polyclinic.Infrastructure.Mongo.Repositories;

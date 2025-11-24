@@ -42,8 +42,8 @@ public class PolyclinicTests(PolyclinicFixture fixture) : IClassFixture<Polyclin
         var expected = new List<string> { "Bob", "Even", "Henry", "Jack" };
 
         var actual = fixture.Appointments
-            .Where(a => a.Doctor.Passport == "D2")
-            .Select(a => a.Patient.FullName)
+            .Where(a => a.Doctor?.Passport == "D2")
+            .Select(a => a.Patient?.FullName!)
             .OrderBy(n => n)
             .ToList();
 
@@ -87,10 +87,10 @@ public class PolyclinicTests(PolyclinicFixture fixture) : IClassFixture<Polyclin
         var actual = fixture.Appointments
             .GroupBy(a => a.Patient)
             .Where(g =>
-                g.Key.BirthDate <= cutoffDate &&
+                g.Key?.BirthDate <= cutoffDate &&
                 g.Select(a => a.Doctor).Distinct().Count() > 1)
-            .OrderBy(g => g.Key.BirthDate)
-            .Select(g => g.Key.FullName)
+            .OrderBy(g => g.Key?.BirthDate)
+            .Select(g => g.Key?.FullName!)
             .ToList();
 
         Assert.Equal(expected, actual);
@@ -112,7 +112,7 @@ public class PolyclinicTests(PolyclinicFixture fixture) : IClassFixture<Polyclin
         var lastDay = firstDay.AddMonths(1).AddDays(-1);
         var actual = fixture.Appointments
             .Where(a => a.Date >= firstDay && a.Date <= lastDay && a.Room == 101)
-            .Select(a => a.Patient.FullName)
+            .Select(a => a.Patient?.FullName!)
             .ToList();
 
         Assert.Equal(expected, actual);
