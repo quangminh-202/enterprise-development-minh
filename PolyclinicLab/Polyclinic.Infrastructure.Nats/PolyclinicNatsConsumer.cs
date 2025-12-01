@@ -8,185 +8,76 @@ using Microsoft.Extensions.Logging;
 using NATS.Client.Core;
 using NATS.Client.JetStream;
 using NATS.Client.JetStream.Models;
+using System.Text.Json;
 
 namespace Polyclinic.Infrastructure.Nats;
 
 /// <summary>
-/// Service for reading data from NATS subject using push consumer
+/// Background service consuming Appointment contracts from a NATS JetStream subject.
 /// </summary>
-public class PolyclinicNatsConsumer : BackgroundService
+public class PolyclinicNatsConsumer(
+    INatsConnection connection,
+    IServiceScopeFactory scopeFactory,
+    IConfiguration configuration,
+    ILogger<PolyclinicNatsConsumer> logger) : BackgroundService
 {
-    private readonly INatsConnection _connection;
-    private readonly IServiceScopeFactory _scopeFactory;
-    private readonly IConfiguration _configuration;
-    private readonly ILogger<PolyclinicNatsConsumer> _logger;
-    private readonly string _streamName;
-    private readonly string _patientSubject;
-    private readonly string _doctorSubject;
-    private readonly string _appointmentSubject;
+    private readonly string _streamName = configuration.GetSection("Nats")["StreamName"] 
+        ?? throw new KeyNotFoundException("StreamName section of Nats is missing");
+    private readonly string _validatedSubject = configuration.GetSection("Nats")["ValidatedSubject"] 
+        ?? throw new KeyNotFoundException("ValidatedSubject section of Nats is missing");
 
-    public PolyclinicNatsConsumer(
-        INatsConnection connection,
-        IServiceScopeFactory scopeFactory,
-        IConfiguration configuration,
-        ILogger<PolyclinicNatsConsumer> logger)
-    {
-        _connection = connection;
-        _scopeFactory = scopeFactory;
-        _configuration = configuration;
-        _logger = logger;
-
-        _streamName = configuration.GetSection("Nats")["StreamName"] 
-            ?? throw new KeyNotFoundException("StreamName section of Nats is missing");
-        _patientSubject = configuration.GetSection("Nats")["PatientSubject"] 
-            ?? "polyclinic.patients";
-        _doctorSubject = configuration.GetSection("Nats")["DoctorSubject"] 
-            ?? "polyclinic.doctors";
-        _appointmentSubject = configuration.GetSection("Nats")["AppointmentSubject"] 
-            ?? "polyclinic.appointments";
-    }
-
+    /// <summary>
+    /// Starts the background service, sets up JetStream consumer, and begins processing appointment messages.
+    /// </summary>
+    /// <param name="stoppingToken">Cancellation token to stop the service.</param>
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         try
         {
-            await _connection.ConnectAsync();
-            var js = new NatsJSContext(_connection);
-            var context = js;
+            await connection.ConnectAsync();
+            var context = new NatsJSContext(connection);
 
-            // Create consumers for each subject
-            var patientConsumer = await context.CreateConsumerAsync(_streamName,
-                new ConsumerConfig
-                {
-                    DeliverPolicy = ConsumerConfigDeliverPolicy.All,
-                    AckPolicy = ConsumerConfigAckPolicy.Explicit,
-                    FilterSubject = _patientSubject
-                },
-                stoppingToken);
-
-            var doctorConsumer = await context.CreateConsumerAsync(_streamName,
-                new ConsumerConfig
-                {
-                    DeliverPolicy = ConsumerConfigDeliverPolicy.All,
-                    AckPolicy = ConsumerConfigAckPolicy.Explicit,
-                    FilterSubject = _doctorSubject
-                },
-                stoppingToken);
-
-            var appointmentConsumer = await context.CreateConsumerAsync(_streamName,
-                new ConsumerConfig
-                {
-                    DeliverPolicy = ConsumerConfigDeliverPolicy.All,
-                    AckPolicy = ConsumerConfigAckPolicy.Explicit,
-                    FilterSubject = _appointmentSubject
-                },
-                stoppingToken);
-
-            _logger.LogInformation("Created consumers for stream {Stream}", _streamName);
-
-            // Start consuming in parallel
-            var tasks = new[]
+            try
             {
-                Task.Run(() => ConsumePatients(patientConsumer, stoppingToken), stoppingToken),
-                Task.Run(() => ConsumeDoctors(doctorConsumer, stoppingToken), stoppingToken),
-                Task.Run(() => ConsumeAppointments(appointmentConsumer, stoppingToken), stoppingToken)
-            };
+                var streamConfig = new StreamConfig(_streamName, [_validatedSubject]);
+                await context.CreateStreamAsync(streamConfig, stoppingToken);
+                logger.LogInformation("Created or verified stream {Stream}", _streamName);
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "Stream {Stream} might already exist", _streamName);
+            }
 
-            await Task.WhenAll(tasks);
+            var consumer = await context.CreateConsumerAsync(_streamName,
+                new ConsumerConfig("appointment-consumer")
+                {
+                    DeliverPolicy = ConsumerConfigDeliverPolicy.New,
+                    AckPolicy = ConsumerConfigAckPolicy.Explicit,
+                    FilterSubject = _validatedSubject
+                },
+                stoppingToken);
+
+            logger.LogInformation("Created consumer for stream {Stream}", _streamName);
+
+            await ConsumeAppointments(consumer, stoppingToken);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Exception occurred during receiving contracts from NATS");
+            logger.LogError(ex, "Exception occurred during receiving contracts from NATS");
         }
     }
 
-    private async Task ConsumePatients(INatsJSConsumer consumer, CancellationToken stoppingToken)
-    {
-        await foreach (var message in consumer.ConsumeAsync(new PolyclinicBatchDeserializer<CreateUpdatePatientDto>(), cancellationToken: stoppingToken))
-        {
-            var batchMsg = message.Data;
-            if (batchMsg?.Data is null)
-            {
-                await message.AckAsync(cancellationToken: stoppingToken);
-                continue;
-            }
-
-            var insertedDtos = new List<object>();
-            using var scope = _scopeFactory.CreateScope();
-            var patientService = scope.ServiceProvider.GetRequiredService<IPatientService>();
-
-            foreach (var patient in batchMsg.Data)
-            {
-                try
-                {
-                    var created = patientService.Create(patient);
-                    insertedDtos.Add(patient);
-                    _logger.LogInformation("Saved Patient: {Id} - {FullName}", created.Id, created.FullName);
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Error saving patient: {FullName}", patient.FullName);
-                }
-            }
-
-            // Send ACK back to producer
-            await SendAckAsync(message.ReplyTo, new BatchAckResponse
-            {
-                BatchId = batchMsg.BatchId,
-                InsertedDtos = insertedDtos
-            });
-
-            await message.AckAsync(cancellationToken: stoppingToken);
-            _logger.LogInformation("Processed patient batch {BatchId}: {Inserted}/{Total}", 
-                batchMsg.BatchId, insertedDtos.Count, batchMsg.Data.Count);
-        }
-    }
-
-    private async Task ConsumeDoctors(INatsJSConsumer consumer, CancellationToken stoppingToken)
-    {
-        await foreach (var message in consumer.ConsumeAsync(new PolyclinicBatchDeserializer<CreateUpdateDoctorDto>(), cancellationToken: stoppingToken))
-        {
-            var batchMsg = message.Data;
-            if (batchMsg?.Data is null)
-            {
-                await message.AckAsync(cancellationToken: stoppingToken);
-                continue;
-            }
-
-            var insertedDtos = new List<object>();
-            using var scope = _scopeFactory.CreateScope();
-            var doctorService = scope.ServiceProvider.GetRequiredService<IDoctorService>();
-
-            foreach (var doctor in batchMsg.Data)
-            {
-                try
-                {
-                    var created = doctorService.Create(doctor);
-                    insertedDtos.Add(doctor);
-                    _logger.LogInformation("Saved Doctor: {Id} - {FullName}", created.Id, created.FullName);
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Error saving doctor: {FullName}", doctor.FullName);
-                }
-            }
-
-            // Send ACK back to producer
-            await SendAckAsync(message.ReplyTo, new BatchAckResponse
-            {
-                BatchId = batchMsg.BatchId,
-                InsertedDtos = insertedDtos
-            });
-
-            await message.AckAsync(cancellationToken: stoppingToken);
-            _logger.LogInformation("Processed doctor batch {BatchId}: {Inserted}/{Total}", 
-                batchMsg.BatchId, insertedDtos.Count, batchMsg.Data.Count);
-        }
-    }
-
+    /// <summary>
+    /// Consumes appointment batches from NATS, saves them to database, and sends acknowledgments.
+    /// Handles partial failures by continuing to process remaining appointments in the batch.
+    /// </summary>
+    /// <param name="consumer">JetStream consumer for receiving messages.</param>
+    /// <param name="stoppingToken">Cancellation token to stop consuming.</param>
     private async Task ConsumeAppointments(INatsJSConsumer consumer, CancellationToken stoppingToken)
     {
-        await foreach (var message in consumer.ConsumeAsync(new PolyclinicBatchDeserializer<CreateUpdateAppointmentDto>(), cancellationToken: stoppingToken))
+        await foreach (var message in consumer.ConsumeAsync(
+            new PolyclinicBatchDeserializer<CreateUpdateAppointmentDto>(), 
+            cancellationToken: stoppingToken))
         {
             var batchMsg = message.Data;
             if (batchMsg?.Data is null)
@@ -196,7 +87,7 @@ public class PolyclinicNatsConsumer : BackgroundService
             }
 
             var insertedDtos = new List<object>();
-            using var scope = _scopeFactory.CreateScope();
+            using var scope = scopeFactory.CreateScope();
             var appointmentService = scope.ServiceProvider.GetRequiredService<IAppointmentService>();
 
             foreach (var appointment in batchMsg.Data)
@@ -205,15 +96,14 @@ public class PolyclinicNatsConsumer : BackgroundService
                 {
                     var created = appointmentService.Create(appointment);
                     insertedDtos.Add(appointment);
-                    _logger.LogInformation("Saved Appointment: {Id} - {Date}", created.Id, created.Date);
+                    logger.LogInformation("Saved Appointment: {Id} - {Date}", created.Id, created.Date);
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Error saving appointment for patient {PatientId}", appointment.PatientId);
+                    logger.LogError(ex, "Error saving appointment for patient {PatientId}", appointment.PatientId);
                 }
             }
 
-            // Send ACK back to producer
             await SendAckAsync(message.ReplyTo, new BatchAckResponse
             {
                 BatchId = batchMsg.BatchId,
@@ -221,27 +111,29 @@ public class PolyclinicNatsConsumer : BackgroundService
             });
 
             await message.AckAsync(cancellationToken: stoppingToken);
-            _logger.LogInformation("Processed appointment batch {BatchId}: {Inserted}/{Total}", 
+            logger.LogInformation("Processed appointment batch {BatchId}: {Inserted}/{Total}", 
                 batchMsg.BatchId, insertedDtos.Count, batchMsg.Data.Count);
         }
     }
 
     /// <summary>
-    /// Sends an acknowledgment response to the specified NATS inbox
+    /// Sends acknowledgment response back to the producer with batch processing results.
     /// </summary>
+    /// <param name="replyTo">NATS reply inbox address.</param>
+    /// <param name="ack">Acknowledgment containing batch ID and successfully inserted items.</param>
     private async Task SendAckAsync(string? replyTo, BatchAckResponse ack)
     {
         if (string.IsNullOrEmpty(replyTo)) return;
 
         try
         {
-            var payload = System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(ack);
-            await _connection.PublishAsync(replyTo, payload);
-            _logger.LogDebug("Sent ACK for batch {BatchId} to {ReplyTo}", ack.BatchId, replyTo);
+            var payload = JsonSerializer.SerializeToUtf8Bytes(ack);
+            await connection.PublishAsync(replyTo, payload);
+            logger.LogDebug("Sent ACK for batch {BatchId} to {ReplyTo}", ack.BatchId, replyTo);
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Failed to send ACK to {ReplyTo}", replyTo);
+            logger.LogWarning(ex, "Failed to send ACK to {ReplyTo}", replyTo);
         }
     }
 }

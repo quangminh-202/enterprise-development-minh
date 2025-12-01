@@ -6,9 +6,9 @@ using System.Text.Json;
 namespace Polyclinic.Infrastructure.Nats.Deserializers;
 
 /// <summary>
-/// Deserializer for batch messages containing a collection of contracts
+/// Deserializer for batch messages containing a collection of contracts.
 /// </summary>
-/// <typeparam name="T">Type of contract in the batch</typeparam>
+/// <typeparam name="T">Type of contract in the batch.</typeparam>
 public class PolyclinicBatchDeserializer<T> : INatsDeserialize<BatchMessage<T>>
 {
     public BatchMessage<T>? Deserialize(in ReadOnlySequence<byte> buffer)

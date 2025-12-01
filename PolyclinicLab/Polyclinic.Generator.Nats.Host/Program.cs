@@ -1,4 +1,3 @@
-using Polyclinic.Generator.Nats.Host.Interfaces;
 using Polyclinic.Generator.Nats.Host.Services;
 using Polyclinic.ServiceDefaults;
 
@@ -8,10 +7,23 @@ builder.AddServiceDefaults();
 builder.AddNatsClient("polyclinic-nats");
 
 // Add services
-builder.Services.AddSingleton<IProducerService, NatsProducerService>();
+builder.Services.AddScoped<IProducerService, NatsProducerService>();
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(options =>
+{
+    var assemblies = AppDomain.CurrentDomain.GetAssemblies()
+        .Where(a => a.GetName().Name!.StartsWith("Polyclinic"))
+        .Distinct();
+
+    foreach (var assembly in assemblies)
+    {
+        var xmlFile = $"{assembly.GetName().Name}.xml";
+        var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
+        if (File.Exists(xmlPath))
+            options.IncludeXmlComments(xmlPath);
+    }
+});
 
 var app = builder.Build();
 
@@ -23,9 +35,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+app.UseHttpsRedirection();
+app.UseAuthorization();
 app.MapControllers();
-
-// Redirect root to Swagger
-app.MapGet("/", () => Results.Redirect("/swagger"));
-
 app.Run();

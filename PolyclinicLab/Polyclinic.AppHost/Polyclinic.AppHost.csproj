@@ -9,6 +9,7 @@
     <Nullable>enable</Nullable>
     <IsAspireHost>true</IsAspireHost>
     <UserSecretsId>35b2b6ab-792b-4557-b071-04f54db1cca6</UserSecretsId>
+    <EnableDefaultAspireRuntimeIdentifierInference>false</EnableDefaultAspireRuntimeIdentifierInference>
   </PropertyGroup>
 
   <ItemGroup>

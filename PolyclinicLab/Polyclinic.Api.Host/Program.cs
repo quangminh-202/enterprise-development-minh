@@ -10,6 +10,7 @@ using MongoDB.Driver;
 using Microsoft.EntityFrameworkCore;
 using Polyclinic.Infrastructure.Mongo;
 using Polyclinic.Infrastructure.Nats;
+using Polyclinic.Validator.Nats;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -46,9 +47,10 @@ builder.Services.AddTransient<IMongoMigration, Migration_001_InitIndexes>();
 builder.Services.AddTransient<IMongoMigration, Migration_002_SeedData>();
 builder.Services.AddScoped<MigrationRunner>();
 
-// Register NATS Consumer Service
+// Register NATS services
 builder.AddNatsClient("polyclinic-nats");
 builder.Services.AddHostedService<PolyclinicNatsConsumer>();
+builder.Services.AddHostedService<AppointmentValidatorService>();
 
 var app = builder.Build();
 

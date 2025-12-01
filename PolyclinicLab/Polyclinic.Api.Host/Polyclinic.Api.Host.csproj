@@ -8,7 +8,7 @@
 
   <ItemGroup>
     <PackageReference Include="Aspire.MongoDB.Driver" Version="9.0.0" />
-    <PackageReference Include="Aspire.NATS.Net" Version="9.0.0" />
+    <PackageReference Include="Aspire.NATS.Net" Version="9.5.2" />
     <PackageReference Include="MongoDB.Driver" Version="2.30.0" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
     <PackageReference Include="AutoMapper" Version="12.0.1" />
@@ -20,6 +20,7 @@
     <ProjectReference Include="..\Polyclinic.Application\Polyclinic.Application.csproj" />
     <ProjectReference Include="..\Polyclinic.Infrastructure.Mongo\Polyclinic.Infrastructure.Mongo.csproj" />
     <ProjectReference Include="..\Polyclinic.Infrastructure.Nats\Polyclinic.Infrastructure.Nats.csproj" />
+    <ProjectReference Include="..\Polyclinic.Validator.Nats\Polyclinic.Validator.Nats.csproj" />
   </ItemGroup>
 
 </Project>

@@ -57,27 +57,23 @@ public class AnalyticsService(
     {
         var today = DateTime.Today;
         var cutoffDate = today.AddYears(-age);
-        
+
         return appointmentRepo.ReadAll()
             .Where(a => a.Patient != null && a.Doctor != null)
             .GroupBy(a => a.Patient!.Id)
-            .Where(g =>
+            .Select(g => new
             {
-                var patient = g.First().Patient;
-                return patient?.BirthDate <= cutoffDate &&
-                       g.Select(a => a.Doctor!.Id).Distinct().Count() > 1;
+                Patient = g.First().Patient!,
+                DoctorCount = g.Select(a => a.Doctor!.Id).Distinct().Count()
             })
-            .OrderBy(g => g.First().Patient!.BirthDate)
-            .Select(g =>
-            {
-                var patient = g.First().Patient!;
-                return new PatientAnalyticsDto(
-                    patient.Id,
-                    patient.FullName,
-                    GetAge(patient.BirthDate, today),
-                    g.Select(a => a.Doctor!.Id).Distinct().Count()
-                );
-            })
+            .Where(x => x.Patient.BirthDate <= cutoffDate && x.DoctorCount > 1)
+            .OrderBy(x => x.Patient.BirthDate)
+            .Select(x => new PatientAnalyticsDto(
+                x.Patient.Id,
+                x.Patient.FullName,
+                GetAge(x.Patient.BirthDate, today),
+                x.DoctorCount
+            ))
             .ToList();
     }
 
