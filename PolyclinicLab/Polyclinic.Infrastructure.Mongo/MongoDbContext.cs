@@ -15,16 +15,10 @@ public class PolyclinicDbContext(DbContextOptions options) : DbContext(options)
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        base.OnModelCreating(modelBuilder);
+        
         modelBuilder.Entity<Doctor>().ToCollection("Doctors");
         modelBuilder.Entity<Patient>().ToCollection("Patients");
-
-        modelBuilder.Entity<Appointment>(entity =>
-        {
-            entity.ToCollection("Appointments");
-            entity.Property(a => a.PatientId).IsRequired();
-            entity.Property(a => a.DoctorId).IsRequired();
-            entity.Ignore(a => a.Patient);
-            entity.Ignore(a => a.Doctor);
-        });
+        modelBuilder.Entity<Appointment>().ToCollection("Appointments");
     }
 }

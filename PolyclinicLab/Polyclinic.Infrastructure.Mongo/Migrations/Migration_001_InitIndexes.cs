@@ -8,15 +8,13 @@ namespace Polyclinic.Infrastructure.Mongo.Migrations;
 /// Migration to create unique indexes on Passport fields for Doctor and Patient collections.
 /// Ensures data integrity by preventing duplicate passport numbers.
 /// </summary>
-public sealed class Migration_001_InitIndexes : IMongoMigration
+public sealed class Migration_001_InitIndexes(IMongoClient mongoClient) : IMongoMigration
 {
     public int Version => 1;
 
     public async Task Up(PolyclinicDbContext ctx, CancellationToken ct)
     {
-        var mongoClient = ctx.Database.GetService<IMongoClient>();
-        var database = mongoClient?.GetDatabase("polyclinic") 
-            ?? throw new InvalidOperationException("MongoDB client not configured");
+        var database = mongoClient.GetDatabase("polyclinic");
         var doctorsCollection = database.GetCollection<Doctor>("Doctors");
         var patientsCollection = database.GetCollection<Patient>("Patients");
         

@@ -35,8 +35,8 @@ public class DataSeeder(
         foreach (var a in fixture.Appointments)
         {
             // Retrieve doctor and patient by their IDs from the repository
-            var doctor = doctorRepo.Read(a.Doctor.Id);
-            var patient = patientRepo.Read(a.Patient.Id);
+            var doctor = a.Doctor != null ? doctorRepo.Read(a.Doctor.Id) : null;
+            var patient = a.Patient != null ? patientRepo.Read(a.Patient.Id) : null;
             if (doctor is null || patient is null)
                 continue;
 

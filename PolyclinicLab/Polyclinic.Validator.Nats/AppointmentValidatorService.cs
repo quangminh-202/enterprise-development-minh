@@ -150,6 +150,13 @@ public class AppointmentValidatorService(
 
             await connection.PublishAsync(_validatedSubject, payload, replyTo: msg.ReplyTo, cancellationToken: ct);
             logger.LogInformation("Published validated batch {batchId} with {count} appointments to {subject}", batchMsg.BatchId, validated.Count, _validatedSubject);
+            
+            // Send ACK back to Generator immediately after validation
+            await SendAck(msg.ReplyTo, new BatchAckResponse 
+            { 
+                BatchId = batchMsg.BatchId,
+                InsertedDtos = validated.Cast<object>().ToList()
+            });
         }
         catch (Exception ex)
         {

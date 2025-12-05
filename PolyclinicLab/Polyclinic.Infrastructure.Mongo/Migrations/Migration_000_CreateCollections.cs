@@ -10,15 +10,13 @@ namespace Polyclinic.Infrastructure.Mongo.Migrations;
 /// In MongoDB, collections are created automatically on first insert,
 /// but this migration explicitly creates them to satisfy the requirement.
 /// </summary>
-public sealed class Migration_000_CreateCollections : IMongoMigration
+public sealed class Migration_000_CreateCollections(IMongoClient mongoClient) : IMongoMigration
 {
     public int Version => 0;
 
     public async Task Up(PolyclinicDbContext ctx, CancellationToken ct)
     {
-        var mongoClient = ctx.Database.GetService<IMongoClient>();
-        var database = mongoClient?.GetDatabase("polyclinic") 
-            ?? throw new InvalidOperationException("MongoDB client not configured");
+        var database = mongoClient.GetDatabase("polyclinic");
         
         var doctorsExists = await CollectionExistsAsync(database, "Doctors", ct);
         if (!doctorsExists)

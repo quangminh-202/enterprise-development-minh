@@ -1,4 +1,4 @@
-﻿using Polyclinic.Domain.Models;
+using Polyclinic.Domain.Models;
 using Polyclinic.Domain.Interfaces;
 using Polyclinic.Application.Services;
 using Polyclinic.Application.Interfaces;
@@ -20,14 +20,22 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddAutoMapper(typeof(AppointmentMappingProfile));
 
-// Register MongoDB Client - support both Aspire and standalone
-builder.AddMongoDBClient("polyclinic");
-
-// Register DbContext with EF Core
+// Register DbContext with EF Core (without Aspire MongoDB client to avoid version conflict)
 builder.Services.AddDbContext<PolyclinicDbContext>((serviceProvider, options) =>
 {
-    var mongoClient = serviceProvider.GetRequiredService<IMongoClient>();
-    options.UseMongoDB(mongoClient, "polyclinic");
+    // Get connection string from configuration or use default
+    var connectionString = builder.Configuration.GetConnectionString("polyclinic") 
+        ?? "mongodb://localhost:27017";
+    
+    options.UseMongoDB(connectionString, "polyclinic");
+});
+
+// Register IMongoClient separately for migrations
+builder.Services.AddSingleton<IMongoClient>(sp =>
+{
+    var connectionString = builder.Configuration.GetConnectionString("polyclinic") 
+        ?? "mongodb://localhost:27017";
+    return new MongoClient(connectionString);
 });
 
 // Register Application Services
@@ -68,6 +76,9 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
+
+// Redirect root to Swagger
+app.MapGet("/", () => Results.Redirect("/swagger")).ExcludeFromDescription();
 
 app.MapDefaultEndpoints();
 app.MapControllers();

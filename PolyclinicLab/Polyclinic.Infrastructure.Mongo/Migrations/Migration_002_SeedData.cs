@@ -34,9 +34,14 @@ public sealed class Migration_002_SeedData : IMongoMigration
             Console.WriteLine($"Inserted {fixture.Patients.Count} patients.");
         }
 
-        // Insert appointments
+        // Insert appointments - clear navigation properties to avoid issues
         if (fixture.Appointments.Count > 0)
         {
+            foreach (var appointment in fixture.Appointments)
+            {
+                appointment.Doctor = null;
+                appointment.Patient = null;
+            }
             await ctx.Appointments.AddRangeAsync(fixture.Appointments, ct);
             await ctx.SaveChangesAsync(ct);
             Console.WriteLine($"Inserted {fixture.Appointments.Count} appointments.");

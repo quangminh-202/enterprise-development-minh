@@ -12,10 +12,12 @@ namespace Polyclinic.Infrastructure.Mongo.Migrations;
 /// </summary>
 public sealed class MigrationRunner(
     PolyclinicDbContext ctx,
+    IMongoClient mongoClient,
     IEnumerable<IMongoMigration> migrations,
     ILogger<MigrationRunner>? log = null)
 {
     private readonly PolyclinicDbContext _ctx = ctx;
+    private readonly IMongoClient _mongoClient = mongoClient;
 
     private readonly IMongoMigration[] _migrations = [.. migrations.OrderBy(m => m.Version)];
 
@@ -23,9 +25,7 @@ public sealed class MigrationRunner(
 
     public async Task RunAsync(CancellationToken ct = default)
     {
-        var mongoClient = _ctx.Database.GetService<IMongoClient>();
-        var database = mongoClient?.GetDatabase("polyclinic") 
-            ?? throw new InvalidOperationException("MongoDB client not configured");
+        var database = _mongoClient.GetDatabase("polyclinic");
         var col = database.GetCollection<BsonDocument>("__migrations");
 
         var index = new CreateIndexModel<BsonDocument>(

@@ -21,6 +21,8 @@ public class NatsProducerService(
         ?? throw new KeyNotFoundException("StreamName section of Nats is missing");
     private readonly string _rawSubject = configuration.GetSection("Nats")["RawSubject"] 
         ?? throw new KeyNotFoundException("RawSubject section of Nats is missing");
+    private readonly string _validatedSubject = configuration.GetSection("Nats")["ValidatedSubject"] 
+        ?? throw new KeyNotFoundException("ValidatedSubject section of Nats is missing");
 
     public async Task<BatchAckResponse> SendAppointmentsAsync<T>(IList<T> batch)
     {
@@ -33,7 +35,7 @@ public class NatsProducerService(
 
         await connection.ConnectAsync();
         var context = connection.CreateJetStreamContext();
-        await context.CreateOrUpdateStreamAsync(new StreamConfig(_streamName, [_rawSubject]));
+        await context.CreateOrUpdateStreamAsync(new StreamConfig(_streamName, [_rawSubject, _validatedSubject]));
 
         var replyInbox = $"_INBOX.{Guid.NewGuid():N}";
         var tcs = new TaskCompletionSource<BatchAckResponse>(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -47,7 +49,26 @@ public class NatsProducerService(
                     var ack = JsonSerializer.Deserialize<BatchAckResponse>(msg.Data);
                     if (ack is not null && ack.BatchId == batchId)
                     {
-                        tcs.TrySetResult(new BatchAckResponse { BatchId = batchId, InsertedDtos = ack.InsertedDtos });
+                        // Convert InsertedDtos from JsonElement to actual DTOs
+                        var insertedDtos = new List<object>();
+                        if (ack.InsertedDtos != null)
+                        {
+                            foreach (var item in ack.InsertedDtos)
+                            {
+                                if (item is System.Text.Json.JsonElement jsonElement)
+                                {
+                                    var dto = JsonSerializer.Deserialize<CreateUpdateAppointmentDto>(jsonElement.GetRawText());
+                                    if (dto != null)
+                                        insertedDtos.Add(dto);
+                                }
+                                else
+                                {
+                                    insertedDtos.Add(item);
+                                }
+                            }
+                        }
+                        
+                        tcs.TrySetResult(new BatchAckResponse { BatchId = batchId, InsertedDtos = insertedDtos });
                         break;
                     }
                 }

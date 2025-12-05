@@ -17,6 +17,7 @@ var nats = builder.AddNats("polyclinic-nats", userName: natsUserName, password: 
 
 // Add NATS NUI (Web UI for NATS management)
 builder.AddContainer("nats-nui", "ghcr.io/nats-nui/nui")
+       .WithEnvironment("NATS_URL", "nats://nats:nats123@polyclinic-nats:4222")
        .WithReference(nats)
        .WaitFor(nats)
        .WithHttpEndpoint(port: 31311, targetPort: 31311);
@@ -35,7 +36,7 @@ builder.AddProject<Projects.Polyclinic_Generator_Nats_Host>("generator")
        .WithExternalHttpEndpoints();
 
 // Add API Host with MongoDB and NATS (includes Validator)
-var apiHost = builder.AddProject<Projects.Polyclinic_Api_Host>("api")
+builder.AddProject<Projects.Polyclinic_Api_Host>("api")
        .WithReference(mongo)
        .WithReference(nats)
        .WaitFor(mongo)
