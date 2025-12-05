@@ -99,10 +99,4 @@ Aspire автоматически запустит:
 - API сервис
 - Generator сервис
 - Validator сервис
-- Aspire Dashboard (http://localhost:15888)
-
-### Доступ к сервисам
-
-- **Aspire Dashboard**: http://localhost:15888
-- **API Swagger**: http://localhost:5000/swagger (порт может отличаться)
-- **Generator Swagger**: http://localhost:5001/swagger (порт может отличаться)
+- Aspire Dashboard

@@ -19,8 +19,8 @@ public static class AppointmentGenerator
                 f.Date.Between(DateTime.Now.AddDays(-90), DateTime.Now.AddDays(90)),
                 f.Random.Int(0, 200),
                 f.Random.Bool(0.4f),
-                f.Random.Int(1, 10),
-                f.Random.Int(1, 10)
+                f.Random.Int(1, 50),
+                f.Random.Int(1, 50)
             ))
             .Generate(count);
 }
