@@ -9,14 +9,14 @@ namespace Polyclinic.Generator.Nats.Host.Services;
 /// <summary>
 /// NATS producer service for sending <see cref="CreateUpdateAppointmentDto"/> contracts to a JetStream subject.
 /// </summary>
-/// <param name="configuration">Application configuration.</param>
-/// <param name="connection">Connection to NATS server.</param>
-/// <param name="logger">Logger for information and errors.</param>
 public class NatsProducerService(
     IConfiguration configuration,
     INatsConnection connection,
     ILogger<NatsProducerService> logger) : IProducerService
 {
+    private const int MaxRetries = 5;
+    private const int AckTimeoutSeconds = 5;
+    
     private readonly string _streamName = configuration.GetSection("Nats")["StreamName"] 
         ?? throw new KeyNotFoundException("StreamName section of Nats is missing");
     private readonly string _rawSubject = configuration.GetSection("Nats")["RawSubject"] 
@@ -27,70 +27,116 @@ public class NatsProducerService(
     public async Task<BatchAckResponse> SendAppointmentsAsync<T>(IList<T> batch)
     {
         var batchId = Guid.NewGuid();
-        var payload = new
+        
+        await EnsureConnectedAsync();
+        await EnsureStreamExistsAsync();
+        
+        var replyInbox = CreateReplyInbox();
+        var ackTask = ListenForAcknowledgmentAsync(batchId, replyInbox);
+        
+        await PublishBatchAsync(batchId, batch, replyInbox);
+        
+        return await WaitForAcknowledgmentAsync(batchId, ackTask);
+    }
+
+    private async Task EnsureConnectedAsync()
+    {
+        var retryDelay = TimeSpan.FromSeconds(1);
+        
+        for (var attempt = 1; attempt <= MaxRetries; attempt++)
         {
-            BatchId = batchId,
-            Data = batch
-        };
+            try
+            {
+                await connection.ConnectAsync();
+                return;
+            }
+            catch (Exception ex) when (attempt < MaxRetries)
+            {
+                logger.LogWarning(ex, 
+                    "Failed to connect to NATS (attempt {Attempt}/{MaxRetries}). Retrying in {Delay}s...", 
+                    attempt, MaxRetries, retryDelay.TotalSeconds);
+                
+                await Task.Delay(retryDelay);
+                retryDelay = TimeSpan.FromSeconds(retryDelay.TotalSeconds * 2);
+            }
+        }
+    }
 
-        await connection.ConnectAsync();
+    private async Task EnsureStreamExistsAsync()
+    {
         var context = connection.CreateJetStreamContext();
-        await context.CreateOrUpdateStreamAsync(new StreamConfig(_streamName, [_rawSubject, _validatedSubject]));
+        await context.CreateOrUpdateStreamAsync(
+            new StreamConfig(_streamName, [_rawSubject, _validatedSubject]));
+    }
 
-        var replyInbox = $"_INBOX.{Guid.NewGuid():N}";
-        var tcs = new TaskCompletionSource<BatchAckResponse>(TaskCreationOptions.RunContinuationsAsynchronously);
+    private static string CreateReplyInbox() => $"_INBOX.{Guid.NewGuid():N}";
+
+    private Task<BatchAckResponse> ListenForAcknowledgmentAsync(Guid batchId, string replyInbox)
+    {
+        var tcs = new TaskCompletionSource<BatchAckResponse>(
+            TaskCreationOptions.RunContinuationsAsynchronously);
 
         _ = Task.Run(async () =>
         {
             await foreach (var msg in connection.SubscribeAsync<byte[]>(replyInbox))
             {
-                try
+                if (msg.Data != null && TryProcessAcknowledgment(msg.Data, batchId, out var ack))
                 {
-                    var ack = JsonSerializer.Deserialize<BatchAckResponse>(msg.Data);
-                    if (ack is not null && ack.BatchId == batchId)
-                    {
-                        // Convert InsertedDtos from JsonElement to actual DTOs
-                        var insertedDtos = new List<object>();
-                        if (ack.InsertedDtos != null)
-                        {
-                            foreach (var item in ack.InsertedDtos)
-                            {
-                                if (item is System.Text.Json.JsonElement jsonElement)
-                                {
-                                    var dto = JsonSerializer.Deserialize<CreateUpdateAppointmentDto>(jsonElement.GetRawText());
-                                    if (dto != null)
-                                        insertedDtos.Add(dto);
-                                }
-                                else
-                                {
-                                    insertedDtos.Add(item);
-                                }
-                            }
-                        }
-                        
-                        tcs.TrySetResult(new BatchAckResponse { BatchId = batchId, InsertedDtos = insertedDtos });
-                        break;
-                    }
-                }
-                catch (Exception ex)
-                {
-                    logger.LogWarning(ex, "Failed to deserialize ack on inbox {inbox}", replyInbox);
+                    tcs.TrySetResult(ack);
+                    break;
                 }
             }
         });
 
-        await connection.PublishAsync(_rawSubject, JsonSerializer.SerializeToUtf8Bytes(payload), replyTo: replyInbox);
-        logger.LogInformation("Sent batch {batchId} ({count} items) to {subject}", batchId, batch.Count, _rawSubject);
+        return tcs.Task;
+    }
 
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
-        var completed = await Task.WhenAny(tcs.Task, Task.Delay(Timeout.Infinite, cts.Token));
-
-        if (completed != tcs.Task)
+    private bool TryProcessAcknowledgment(byte[] data, Guid expectedBatchId, out BatchAckResponse ack)
+    {
+        try
         {
-            logger.LogWarning("No ACK received for batch {batchId} within timeout", batchId);
+            var response = JsonSerializer.Deserialize<BatchAckResponse>(data);
+            if (response?.BatchId == expectedBatchId)
+            {
+                ack = response;
+                return true;
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Failed to deserialize acknowledgment");
+        }
+
+        ack = default!;
+        return false;
+    }
+
+    private async Task PublishBatchAsync<T>(Guid batchId, IList<T> batch, string replyInbox)
+    {
+        var payload = new BatchMessage<T> 
+        { 
+            BatchId = batchId, 
+            Batch = batch.ToList() 
+        };
+        var serializedPayload = JsonSerializer.SerializeToUtf8Bytes(payload);
+        
+        await connection.PublishAsync(_rawSubject, serializedPayload, replyTo: replyInbox);
+        
+        logger.LogInformation("Sent batch {BatchId} ({Count} items) to {Subject}", 
+            batchId, batch.Count, _rawSubject);
+    }
+
+    private async Task<BatchAckResponse> WaitForAcknowledgmentAsync(Guid batchId, Task<BatchAckResponse> ackTask)
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(AckTimeoutSeconds));
+        var completed = await Task.WhenAny(ackTask, Task.Delay(Timeout.Infinite, cts.Token));
+
+        if (completed != ackTask)
+        {
+            logger.LogWarning("No ACK received for batch {BatchId} within {Timeout}s timeout", batchId, AckTimeoutSeconds);
             return new BatchAckResponse { BatchId = batchId };
         }
 
-        return await tcs.Task;
+        return await ackTask;
     }
 }

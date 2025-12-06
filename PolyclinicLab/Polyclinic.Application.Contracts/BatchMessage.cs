@@ -14,5 +14,5 @@ public class BatchMessage<T>
     /// <summary>
     /// The collection of contracts in this batch
     /// </summary>
-    public List<T>? Data { get; set; }
+    public List<T>? Batch { get; set; }
 }

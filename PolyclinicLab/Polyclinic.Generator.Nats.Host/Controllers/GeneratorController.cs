@@ -52,8 +52,7 @@ public class GeneratorController(ILogger<GeneratorController> logger, IProducerS
                     remaining -= inserted;
                     successfulItems += inserted;
 
-                    if (result.InsertedDtos != null)
-                        list.AddRange(result.InsertedDtos.Cast<CreateUpdateAppointmentDto>());
+                    list.AddRange(currentBatch.Take(inserted));
 
                     if (remaining > 0)
                         logger.LogWarning("{remaining} items not inserted, retrying", remaining);

@@ -80,7 +80,7 @@ public class PolyclinicNatsConsumer(
             cancellationToken: stoppingToken))
         {
             var batchMsg = message.Data;
-            if (batchMsg?.Data is null)
+            if (batchMsg?.Batch is null)
             {
                 await message.AckAsync(cancellationToken: stoppingToken);
                 continue;
@@ -90,7 +90,7 @@ public class PolyclinicNatsConsumer(
             using var scope = scopeFactory.CreateScope();
             var appointmentService = scope.ServiceProvider.GetRequiredService<IAppointmentService>();
 
-            foreach (var appointment in batchMsg.Data)
+            foreach (var appointment in batchMsg.Batch)
             {
                 try
                 {
@@ -112,7 +112,7 @@ public class PolyclinicNatsConsumer(
 
             await message.AckAsync(cancellationToken: stoppingToken);
             logger.LogInformation("Processed appointment batch {BatchId}: {Inserted}/{Total}", 
-                batchMsg.BatchId, insertedDtos.Count, batchMsg.Data.Count);
+                batchMsg.BatchId, insertedDtos.Count, batchMsg.Batch.Count);
         }
     }
 

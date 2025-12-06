@@ -39,7 +39,7 @@ public class AppointmentValidatorService(
     {
         await connection.ConnectAsync();
         var context = connection.CreateJetStreamContext();
-        await context.CreateOrUpdateStreamAsync(new StreamConfig(_streamName, [_validatedSubject]), stoppingToken);
+        await context.CreateOrUpdateStreamAsync(new StreamConfig(_streamName, [_rawSubject, _validatedSubject]), stoppingToken);
 
         logger.LogInformation("AppointmentValidatorService started, subscribing to {subject}", _rawSubject);
 
@@ -60,7 +60,7 @@ public class AppointmentValidatorService(
         try
         {
             batchMsg = JsonSerializer.Deserialize<BatchMessage<CreateUpdateAppointmentDto>>(msg.Data);
-            if (batchMsg is null || batchMsg.Data is null)
+            if (batchMsg is null || batchMsg.Batch is null)
             {
                 logger.LogWarning("Malformed batch on {subject}", _rawSubject);
                 await SendAck(msg.ReplyTo, new BatchAckResponse { BatchId = batchMsg?.BatchId ?? Guid.Empty });
@@ -79,7 +79,7 @@ public class AppointmentValidatorService(
             using var scope = scopeFactory.CreateScope();
             var context = scope.ServiceProvider.GetRequiredService<PolyclinicDbContext>();
 
-            var incoming = batchMsg.Data;
+            var incoming = batchMsg.Batch;
             
             // Extract unique IDs for validation
             var patientIds = incoming.Select(a => a.PatientId).Distinct().ToList();
@@ -145,7 +145,7 @@ public class AppointmentValidatorService(
                 return;
             }
 
-            var outMsg = new BatchMessage<CreateUpdateAppointmentDto> { BatchId = batchMsg.BatchId, Data = validated };
+            var outMsg = new BatchMessage<CreateUpdateAppointmentDto> { BatchId = batchMsg.BatchId, Batch = validated };
             var payload = JsonSerializer.SerializeToUtf8Bytes(outMsg);
 
             await connection.PublishAsync(_validatedSubject, payload, replyTo: msg.ReplyTo, cancellationToken: ct);
