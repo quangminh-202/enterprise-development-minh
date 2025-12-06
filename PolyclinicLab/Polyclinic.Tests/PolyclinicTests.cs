@@ -99,13 +99,13 @@ public class PolyclinicTests(PolyclinicFixture fixture) : IClassFixture<Polyclin
     /// <summary>
     /// (5) Return all appointments scheduled in room "101"
     /// within the current month. Select patient names.
-    /// Expected: Jack, Even, Alice, Charlie (based on fixture: -20, -15, -2, +1 days from now).
+    /// Expected: Alice, Charlie, Henry (based on fixture: -2, +1, +6 days from now in room 101).
     /// Actual: LINQ query filtering by room and date range.
     /// </summary>
     [Fact]
     public void AppointmentsCurrentMonthInSelectedRoom()
     {
-        var expected = new List<string> { "Jack", "Even", "Alice" };
+        var expected = new List<string> { "Alice", "Charlie", "Henry" };
 
         var today = DateTime.Today;
         var firstDay = new DateTime(today.Year, today.Month, 1);
