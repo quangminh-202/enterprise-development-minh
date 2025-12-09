@@ -24,7 +24,7 @@ public class NatsProducerService(
     private readonly string _validatedSubject = configuration.GetSection("Nats")["ValidatedSubject"] 
         ?? throw new KeyNotFoundException("ValidatedSubject section of Nats is missing");
 
-    public async Task<BatchAckResponse> SendAppointmentsAsync<T>(IList<T> batch)
+    public async Task<BatchAckResponse> SendBatchAsync<T>(IList<T> batch)
     {
         var batchId = Guid.NewGuid();
         
@@ -91,7 +91,7 @@ public class NatsProducerService(
         return tcs.Task;
     }
 
-    private bool TryProcessAcknowledgment(byte[] data, Guid expectedBatchId, out BatchAckResponse ack)
+    private bool TryProcessAcknowledgment(byte[] data, Guid expectedBatchId, out BatchAckResponse? ack)
     {
         try
         {
@@ -107,7 +107,7 @@ public class NatsProducerService(
             logger.LogWarning(ex, "Failed to deserialize acknowledgment");
         }
 
-        ack = default!;
+        ack = null;
         return false;
     }
 
@@ -116,7 +116,7 @@ public class NatsProducerService(
         var payload = new BatchMessage<T> 
         { 
             BatchId = batchId, 
-            Batch = batch.ToList() 
+            Batch = [.. batch]
         };
         var serializedPayload = JsonSerializer.SerializeToUtf8Bytes(payload);
         

@@ -49,4 +49,3 @@ public sealed class Migration_000_CreateCollections(IMongoClient mongoClient) : 
         return await collections.AnyAsync(ct);
     }
 }
-

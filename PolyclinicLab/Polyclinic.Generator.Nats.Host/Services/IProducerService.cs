@@ -8,10 +8,10 @@ namespace Polyclinic.Generator.Nats.Host.Services;
 public interface IProducerService
 {
     /// <summary>
-    /// Sends a batch of appointments asynchronously.
+    /// Sends a batch of items asynchronously.
     /// </summary>
     /// <typeparam name="T">Type of items in the batch.</typeparam>
     /// <param name="batch">List of items to send.</param>
     /// <returns>Batch acknowledgment response.</returns>
-    Task<BatchAckResponse> SendAppointmentsAsync<T>(IList<T> batch);
+    public Task<BatchAckResponse> SendBatchAsync<T>(IList<T> batch);
 }

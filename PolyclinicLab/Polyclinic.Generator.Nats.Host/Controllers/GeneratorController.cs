@@ -38,7 +38,7 @@ public class GeneratorController(ILogger<GeneratorController> logger, IProducerS
                 while (remaining > 0)
                 {
                     var currentBatch = batch.Skip(successfulItems).Take(remaining).ToList();
-                    var result = await producerService.SendAppointmentsAsync(currentBatch);
+                    var result = await producerService.SendBatchAsync(currentBatch);
 
                     if (!result.Success)
                     {

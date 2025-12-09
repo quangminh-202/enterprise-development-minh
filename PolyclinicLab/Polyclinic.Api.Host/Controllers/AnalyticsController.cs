@@ -80,7 +80,6 @@ public class AnalyticsController(IAnalyticsService analyticsService, ILogger<Ana
         }
     }
 
-
     /// <summary>
     /// (4) Returns all patients older than 30 years
     /// who have appointments with more than one distinct doctor.
