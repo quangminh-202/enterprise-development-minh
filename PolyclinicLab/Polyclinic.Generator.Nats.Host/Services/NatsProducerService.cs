@@ -71,9 +71,9 @@ public class NatsProducerService(
 
     private static string CreateReplyInbox() => $"_INBOX.{Guid.NewGuid():N}";
 
-    private Task<BatchAckResponse> ListenForAcknowledgmentAsync(Guid batchId, string replyInbox)
+    private Task<BatchAckResponse?> ListenForAcknowledgmentAsync(Guid batchId, string replyInbox)
     {
-        var tcs = new TaskCompletionSource<BatchAckResponse>(
+        var tcs = new TaskCompletionSource<BatchAckResponse?>(
             TaskCreationOptions.RunContinuationsAsynchronously);
 
         _ = Task.Run(async () =>
@@ -126,7 +126,7 @@ public class NatsProducerService(
             batchId, batch.Count, _rawSubject);
     }
 
-    private async Task<BatchAckResponse> WaitForAcknowledgmentAsync(Guid batchId, Task<BatchAckResponse> ackTask)
+    private async Task<BatchAckResponse> WaitForAcknowledgmentAsync(Guid batchId, Task<BatchAckResponse?> ackTask)
     {
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(AckTimeoutSeconds));
         var completed = await Task.WhenAny(ackTask, Task.Delay(Timeout.Infinite, cts.Token));
@@ -137,6 +137,14 @@ public class NatsProducerService(
             return new BatchAckResponse { BatchId = batchId };
         }
 
-        return await ackTask;
+        var ack = await ackTask;
+
+        if (ack is null)
+        {
+            logger.LogWarning("Received null ACK for batch {BatchId}", batchId);
+            return new BatchAckResponse { BatchId = batchId };
+        }
+
+        return ack;
     }
 }
