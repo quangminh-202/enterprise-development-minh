@@ -1,0 +1,230 @@
+@inject PolyclinicApiWrapper PolyclinicApi
+@inject IJSRuntime JSRuntime
+
+<!-- Bootstrap Modal -->
+<div class="modal fade" id="doctorModal" tabindex="-1" aria-labelledby="doctorModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="doctorModalLabel">
+                    @(IsEditing ? "Edit Doctor" : "New Doctor")
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                @if (!string.IsNullOrEmpty(ErrorMessage))
+                {
+                    <div class="alert alert-danger" role="alert">
+                        @ErrorMessage
+                    </div>
+                }
+                <form>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Passport *</label>
+                                <input type="text" class="form-control" 
+                                       @bind="DoctorForm.Passport" 
+                                       placeholder="Enter passport number" />
+                                @if (string.IsNullOrWhiteSpace(DoctorForm.Passport))
+                                {
+                                    <small class="text-danger">Passport is required.</small>
+                                }
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Full Name *</label>
+                                <input type="text" class="form-control" 
+                                       @bind="DoctorForm.FullName" 
+                                       placeholder="Enter full name" />
+                                @if (string.IsNullOrWhiteSpace(DoctorForm.FullName))
+                                {
+                                    <small class="text-danger">Full name is required.</small>
+                                }
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Birth Year *</label>
+                                <input type="number" class="form-control" 
+                                       @bind="DoctorForm.BirthYear" 
+                                       placeholder="1990" />
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Experience (Years) *</label>
+                                <input type="number" class="form-control" 
+                                       @bind="DoctorForm.Experience" 
+                                       placeholder="5" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="mb-3">
+                                <label class="form-label">Specialization *</label>
+                                <select class="form-select" @bind="DoctorForm.Specialization">
+                                    <option value="">Select specialization...</option>
+                                    <option value="Internal Medicine">Internal Medicine</option>
+                                    <option value="Surgery">Surgery</option>
+                                    <option value="Obstetrics and Gynecology">Obstetrics and Gynecology</option>
+                                    <option value="Pediatrics">Pediatrics</option>
+                                    <option value="Cardiology">Cardiology</option>
+                                    <option value="Neurology">Neurology</option>
+                                    <option value="Dermatology">Dermatology</option>
+                                    <option value="Orthopedics">Orthopedics</option>
+                                    <option value="Psychiatry">Psychiatry</option>
+                                    <option value="Radiology">Radiology</option>
+                                </select>
+                                @if (string.IsNullOrWhiteSpace(DoctorForm.Specialization))
+                                {
+                                    <small class="text-danger">Specialization is required.</small>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" @onclick="ResetForm">Cancel</button>
+                <button type="button" class="btn btn-primary" @onclick="SaveDoctorAsync" 
+                        disabled="@(!IsFormValid() || IsSaving)">
+                    @if (IsSaving)
+                    {
+                        <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                    }
+                    @(IsEditing ? "Update" : "Create")
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+@code {
+    [Parameter] public EventCallback OnDoctorSaved { get; set; }
+
+    private CreateUpdateDoctorDto DoctorForm { get; set; } = new();
+    private DoctorDto? EditingDoctor { get; set; }
+    private bool IsEditing => EditingDoctor != null;
+    private bool IsSaving { get; set; } = false;
+    private string? ErrorMessage { get; set; }
+
+    public async Task Show(DoctorDto? doctor = null)
+    {
+        try
+        {
+            EditingDoctor = doctor;
+            ErrorMessage = null;
+            IsSaving = false;
+            
+            if (IsEditing)
+            {
+                DoctorForm = new CreateUpdateDoctorDto
+                {
+                    Passport = doctor!.Passport ?? "",
+                    FullName = doctor.FullName ?? "",
+                    BirthYear = doctor.BirthYear,
+                    Specialization = doctor.Specialization ?? "",
+                    Experience = doctor.Experience
+                };
+            }
+            else
+            {
+                DoctorForm = new CreateUpdateDoctorDto
+                {
+                    Passport = "",
+                    FullName = "",
+                    BirthYear = DateTime.Now.Year - 30,
+                    Specialization = "",
+                    Experience = 0
+                };
+            }
+
+            var bootstrapExists = await JSRuntime.InvokeAsync<bool>("eval", "typeof bootstrap !== 'undefined'");
+            
+            if (bootstrapExists)
+            {
+                await JSRuntime.InvokeVoidAsync("eval", "new bootstrap.Modal(document.getElementById('doctorModal')).show()");
+            }
+            else
+            {
+                await JSRuntime.InvokeVoidAsync("eval", "$('#doctorModal').modal('show')");
+            }
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"Error opening modal: {ex.Message}";
+        }
+    }
+
+    private async Task CloseDoctorModalAsync()
+    {
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("eval", "bootstrap.Modal.getInstance(document.getElementById('doctorModal'))?.hide()");
+        }
+        catch
+        {
+            await JSRuntime.InvokeVoidAsync("eval", "$('#doctorModal').modal('hide')");
+        }
+        ResetForm();
+    }
+
+    private void ResetForm()
+    {
+        EditingDoctor = null;
+        ErrorMessage = null;
+        IsSaving = false;
+        DoctorForm = new CreateUpdateDoctorDto
+        {
+            Passport = "",
+            FullName = "",
+            BirthYear = DateTime.Now.Year - 30,
+            Specialization = "",
+            Experience = 0
+        };
+    }
+
+    private bool IsFormValid() =>
+        !string.IsNullOrWhiteSpace(DoctorForm.Passport) &&
+        !string.IsNullOrWhiteSpace(DoctorForm.FullName) &&
+        !string.IsNullOrWhiteSpace(DoctorForm.Specialization);
+
+    private async Task SaveDoctorAsync()
+    {
+        if (!IsFormValid() || IsSaving) return;
+
+        IsSaving = true;
+        ErrorMessage = null;
+        StateHasChanged();
+
+        try
+        {
+            if (IsEditing)
+            {
+                await PolyclinicApi.UpdateDoctor(EditingDoctor!.Id, DoctorForm);
+            }
+            else
+            {
+                await PolyclinicApi.CreateDoctor(DoctorForm);
+            }
+
+            await CloseDoctorModalAsync();
+            await OnDoctorSaved.InvokeAsync();
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"Error saving doctor: {ex.Message}";
+        }
+        finally
+        {
+            IsSaving = false;
+            StateHasChanged();
+        }
+    }
+}

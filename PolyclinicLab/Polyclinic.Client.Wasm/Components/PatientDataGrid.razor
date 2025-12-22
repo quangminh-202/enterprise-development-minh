@@ -1,0 +1,258 @@
+@inject PolyclinicApiWrapper PolyclinicApi
+@inject IJSRuntime JSRuntime
+
+<Card>
+    <CardHeader>
+        <Row Class="justify-content-between">
+            <Column ColumnSize="ColumnSize.IsAuto">
+                <h4>Patient Management</h4>
+            </Column>
+            <Column ColumnSize="ColumnSize.IsAuto">
+                <Button Color="Color.Primary" Clicked="OpenCreateModal">
+                    <Icon Name="IconName.Add" /> Add New
+                </Button>
+                <Button Color="Color.Secondary" Clicked="RefreshData">
+                    <Icon Name="IconName.Sync" /> Refresh
+                </Button>
+            </Column>
+        </Row>
+    </CardHeader>
+    <CardBody>
+        @if (isLoading)
+        {
+            <div class="text-center p-4">
+                <div class="spinner-border" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="mt-2">Loading patients...</p>
+            </div>
+        }
+        else
+        {
+            <DataGrid TItem="PatientDto"
+                      Data="Patients"
+                      Responsive
+                      Striped
+                      Hoverable
+                      ShowPager
+                      PageSize="10"
+                      @key="@refreshKey">
+            <DataGridColumns>
+                <DataGridColumn Width="150px"
+                                TItem="PatientDto"
+                                Field="@nameof(PatientDto.Id)"
+                                Caption="Actions"
+                                Sortable="false">
+                    <DisplayTemplate>
+                        <Dropdown>
+                            <DropdownToggle Color="Color.Primary" Size="Size.Small">
+                                <Icon Name="IconName.Settings" /> Actions
+                            </DropdownToggle>
+                            <DropdownMenu>
+                                <DropdownItem Clicked="() => OpenEditModal(context)">
+                                    <Icon Name="IconName.Edit" /> Edit
+                                </DropdownItem>
+                                <DropdownDivider />
+                                <DropdownItem Clicked="() => DeletePatientAsync(context)" TextColor="TextColor.Danger">
+                                    <Icon Name="IconName.Delete" /> Delete
+                                </DropdownItem>
+                            </DropdownMenu>
+                        </Dropdown>
+                    </DisplayTemplate>
+                </DataGridColumn>
+
+                <DataGridColumn TItem="PatientDto"
+                                Field="@nameof(PatientDto.Id)"
+                                Caption="ID"
+                                Sortable
+                                Width="80px">
+                    <DisplayTemplate>
+                        <Badge Color="Color.Primary">
+                            @context.Id
+                        </Badge>
+                    </DisplayTemplate>
+                </DataGridColumn>
+                
+                <DataGridColumn TItem="PatientDto"
+                                Field="@nameof(PatientDto.Passport)"
+                                Caption="Passport"
+                                Sortable>
+                    <DisplayTemplate>
+                        <Badge Color="Color.Info">@context.Passport</Badge>
+                    </DisplayTemplate>
+                </DataGridColumn>
+                
+                <DataGridColumn TItem="PatientDto"
+                                Field="@nameof(PatientDto.FullName)"
+                                Caption="Full Name"
+                                Sortable>
+                    <DisplayTemplate>
+                        <div class="d-flex align-items-center">
+                            <Icon Name="IconName.User" Class="me-2 text-primary" />
+                            <div>
+                                <strong>@context.FullName</strong>
+                            </div>
+                        </div>
+                    </DisplayTemplate>
+                </DataGridColumn>
+                
+                <DataGridColumn TItem="PatientDto"
+                                Field="@nameof(PatientDto.Gender)"
+                                Caption="Gender"
+                                Sortable>
+                    <DisplayTemplate>
+                        <Badge Color="@(context.Gender == "Male" ? Color.Primary : Color.Secondary)">
+                            <Icon Name="IconName.User" />
+                            @context.Gender
+                        </Badge>
+                    </DisplayTemplate>
+                </DataGridColumn>
+                
+                <DataGridColumn TItem="PatientDto"
+                                Field="@nameof(PatientDto.BirthDate)"
+                                Caption="Birth Date"
+                                Sortable>
+                    <DisplayTemplate>
+                        @context.BirthDate.ToString("dd/MM/yyyy")
+                        <br />
+                        <small class="text-muted">(@CalculateAge(context.BirthDate) years old)</small>
+                    </DisplayTemplate>
+                </DataGridColumn>
+                
+                <DataGridColumn TItem="PatientDto"
+                                Field="@nameof(PatientDto.Address)"
+                                Caption="Address"
+                                Sortable>
+                    <DisplayTemplate>
+                        <Icon Name="IconName.Home" Class="me-1" />
+                        @(string.IsNullOrEmpty(context.Address) ? "N/A" : context.Address)
+                    </DisplayTemplate>
+                </DataGridColumn>
+                
+                <DataGridColumn TItem="PatientDto"
+                                Field="@nameof(PatientDto.BloodType)"
+                                Caption="Blood Type"
+                                Sortable>
+                    <DisplayTemplate>
+                        <Badge Color="Color.Danger">
+                            <Icon Name="IconName.Heart" />
+                            @context.BloodType@(context.RhFactor == "Positive" ? "+" : "-")
+                        </Badge>
+                    </DisplayTemplate>
+                </DataGridColumn>
+                
+                <DataGridColumn TItem="PatientDto"
+                                Field="@nameof(PatientDto.Phone)"
+                                Caption="Phone Number"
+                                Sortable>
+                    <DisplayTemplate>
+                        <a href="tel:@context.Phone" class="text-decoration-none">
+                            <Icon Name="IconName.Phone" /> @context.Phone
+                        </a>
+                    </DisplayTemplate>
+                </DataGridColumn>
+            </DataGridColumns>
+            
+            <LoadingTemplate>
+                <div class="text-center p-4">
+                    <p class="mt-2">Loading data...</p>
+                </div>
+            </LoadingTemplate>
+            
+            <EmptyTemplate>
+                <div class="text-center p-4">
+                    <Icon Name="IconName.Users" Style="font-size: 3rem; color: #ccc;" />
+                    <h5 class="mt-3">No patients found</h5>
+                    <p class="text-muted">Click "Add New" button to create the first patient</p>
+                </div>
+            </EmptyTemplate>
+        </DataGrid>
+        }
+    </CardBody>
+</Card>
+
+<PatientCreateModal @ref="PatientCreateModal" OnPatientSaved="@HandlePatientSaved" />
+
+@code {
+    [Parameter] public EventCallback OnDataChanged { get; set; }
+
+    private IList<PatientDto> Patients { get; set; } = new List<PatientDto>();
+    private PatientCreateModal PatientCreateModal { get; set; } = new();
+    private bool isLoading = false;
+    private string refreshKey = Guid.NewGuid().ToString();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await RefreshData();
+    }
+
+    private async Task RefreshData()
+    {
+        try
+        {
+            isLoading = true;
+            StateHasChanged();
+            
+            var patients = await PolyclinicApi.GetAllPatients();
+            Patients = patients?.ToList() ?? new List<PatientDto>();
+            
+            refreshKey = Guid.NewGuid().ToString();
+            
+            isLoading = false;
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", $"Error loading patients: {ex.Message}");
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private Task OpenCreateModal() => PatientCreateModal?.Show() ?? Task.CompletedTask;
+
+    private async Task OpenEditModal(PatientDto patient)
+    {
+        await PatientCreateModal.Show(patient);
+    }
+
+    private async Task DeletePatientAsync(PatientDto patient)
+    {
+        var confirmed = await JSRuntime.InvokeAsync<bool>("confirm", 
+            $"Are you sure you want to delete patient {patient.FullName}?");
+        
+        if (confirmed)
+        {
+            try
+            {
+                await PolyclinicApi.DeletePatient(patient.Id);
+                
+                await RefreshData();
+                await OnDataChanged.InvokeAsync();
+                
+                await JSRuntime.InvokeVoidAsync("alert", $"Patient {patient.FullName} deleted successfully");
+            }
+            catch (Exception ex)
+            {
+                await JSRuntime.InvokeVoidAsync("alert", $"Error deleting patient: {ex.Message}");
+            }
+        }
+    }
+
+    private async Task HandlePatientSaved()
+    {
+        await RefreshData();
+        await OnDataChanged.InvokeAsync();
+    }
+
+    private int CalculateAge(DateTime birthDate)
+    {
+        var today = DateTime.Today;
+        var age = today.Year - birthDate.Year;
+        if (birthDate.Date > today.AddYears(-age)) age--;
+        return age;
+    }
+    
+    private int CalculateAge(DateTimeOffset birthDate) => CalculateAge(birthDate.DateTime);
+
+}

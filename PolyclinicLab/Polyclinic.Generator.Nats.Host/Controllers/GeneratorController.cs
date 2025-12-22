@@ -28,40 +28,34 @@ public class GeneratorController(ILogger<GeneratorController> logger, IProducerS
         try
         {
             var list = new List<CreateUpdateAppointmentDto>(payloadLimit);
-            var counter = 0;
-            while (counter < payloadLimit)
+            var totalSent = 0;
+            
+            while (totalSent < payloadLimit)
             {
-                var batch = AppointmentGenerator.GenerateAppointments(batchSize);
-                var remaining = batch.Count;
-                var successfulItems = 0;
+                var currentBatchSize = Math.Min(batchSize, payloadLimit - totalSent);
+                var batch = AppointmentGenerator.GenerateAppointments(currentBatchSize);
+                
+                var result = await producerService.SendBatchAsync(batch);
 
-                while (remaining > 0)
+                if (result.Success)
                 {
-                    var currentBatch = batch.Skip(successfulItems).Take(remaining).ToList();
-                    var result = await producerService.SendBatchAsync(currentBatch);
-
-                    if (!result.Success)
-                    {
-                        logger.LogWarning("Batch failed, regenerating {remaining} items", remaining);
-                        var newAppointments = AppointmentGenerator.GenerateAppointments(remaining);
-                        batch = [.. batch.Take(successfulItems), .. newAppointments];
-                        continue;
-                    }
-
-                    var inserted = result.Inserted;
-                    remaining -= inserted;
-                    successfulItems += inserted;
-
-                    list.AddRange(currentBatch.Take(inserted));
-
-                    if (remaining > 0)
-                        logger.LogWarning("{remaining} items not inserted, retrying", remaining);
+                    var inserted = Math.Min(result.Inserted, batch.Count);
+                    list.AddRange(batch.Take(inserted));
+                    totalSent += inserted;
+                    
+                    logger.LogInformation("Batch processed: {inserted}/{batchSize} appointments inserted. Total: {totalSent}/{payloadLimit}", 
+                        inserted, batch.Count, totalSent, payloadLimit);
+                }
+                else
+                {
+                    logger.LogWarning("Batch failed completely, skipping to next batch");
+                    totalSent += currentBatchSize; // Skip failed batch to avoid infinite loop
                 }
 
-                counter += batchSize;
                 await Task.Delay(waitTime * 1000);
             }
-            logger.LogInformation("Generation completed: {total} appointments sent", list.Count);
+            
+            logger.LogInformation("Generation completed: {total} appointments sent successfully", list.Count);
             return Ok(list);
         }
         catch (Exception ex)

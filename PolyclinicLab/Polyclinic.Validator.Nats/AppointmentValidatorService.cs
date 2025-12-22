@@ -37,15 +37,30 @@ public class AppointmentValidatorService(
     /// <param name="stoppingToken">Token to signal service shutdown.</param>
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        await connection.ConnectAsync();
-        var context = connection.CreateJetStreamContext();
-        await context.CreateOrUpdateStreamAsync(new StreamConfig(_streamName, [_rawSubject, _validatedSubject]), stoppingToken);
-
-        logger.LogInformation("AppointmentValidatorService started, subscribing to {subject}", _rawSubject);
-
-        await foreach (var msg in connection.SubscribeAsync<byte[]>(_rawSubject, cancellationToken: stoppingToken))
+        try
         {
-            _ = ProcessMessageAsync(msg, stoppingToken);
+            logger.LogInformation("AppointmentValidatorService starting...");
+            
+            await connection.ConnectAsync();
+            logger.LogInformation("Connected to NATS successfully");
+            
+            var context = connection.CreateJetStreamContext();
+            await context.CreateOrUpdateStreamAsync(new StreamConfig(_streamName, [_rawSubject, _validatedSubject]), stoppingToken);
+            logger.LogInformation("JetStream configured successfully. Stream: {streamName}, Subjects: [{rawSubject}, {validatedSubject}]", 
+                _streamName, _rawSubject, _validatedSubject);
+
+            logger.LogInformation("AppointmentValidatorService started, subscribing to {subject}", _rawSubject);
+
+            await foreach (var msg in connection.SubscribeAsync<byte[]>(_rawSubject, cancellationToken: stoppingToken))
+            {
+                logger.LogInformation("Received message from {subject}, processing...", _rawSubject);
+                _ = ProcessMessageAsync(msg, stoppingToken);
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error in AppointmentValidatorService.ExecuteAsync");
+            throw;
         }
     }
 
@@ -56,6 +71,9 @@ public class AppointmentValidatorService(
     /// <param name="ct">Cancellation token to stop processing.</param>
     private async Task ProcessMessageAsync(NatsMsg<byte[]> msg, CancellationToken ct)
     {
+        logger.LogInformation("Processing message with {bytes} bytes, ReplyTo: {replyTo}", 
+            msg.Data?.Length ?? 0, msg.ReplyTo);
+            
         BatchMessage<CreateUpdateAppointmentDto>? batchMsg;
         try
         {
@@ -63,14 +81,27 @@ public class AppointmentValidatorService(
             if (batchMsg is null || batchMsg.Batch is null)
             {
                 logger.LogWarning("Malformed batch on {subject}", _rawSubject);
-                await SendAck(msg.ReplyTo, new BatchAckResponse { BatchId = batchMsg?.BatchId ?? Guid.Empty });
+                await SendAck(msg.ReplyTo, new BatchAckResponse 
+                { 
+                    BatchId = batchMsg?.BatchId ?? Guid.Empty,
+                    Success = false,
+                    Inserted = 0
+                });
                 return;
             }
+            
+            logger.LogInformation("Deserialized batch {batchId} with {count} appointments", 
+                batchMsg.BatchId, batchMsg.Batch.Count);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to deserialize batch from {subject}", _rawSubject);
-            await SendAck(msg.ReplyTo, new BatchAckResponse { BatchId = Guid.Empty });
+            await SendAck(msg.ReplyTo, new BatchAckResponse 
+            { 
+                BatchId = Guid.Empty,
+                Success = false,
+                Inserted = 0
+            });
             return;
         }
 
@@ -141,7 +172,12 @@ public class AppointmentValidatorService(
             if (validated.Count == 0)
             {
                 logger.LogInformation("Batch {batchId} contains 0 valid appointments — replying 0", batchMsg.BatchId);
-                await SendAck(msg.ReplyTo, new BatchAckResponse { BatchId = batchMsg.BatchId });
+                await SendAck(msg.ReplyTo, new BatchAckResponse 
+                { 
+                    BatchId = batchMsg.BatchId,
+                    Success = true,
+                    Inserted = 0
+                });
                 return;
             }
 
@@ -155,13 +191,20 @@ public class AppointmentValidatorService(
             await SendAck(msg.ReplyTo, new BatchAckResponse 
             { 
                 BatchId = batchMsg.BatchId,
+                Success = true,
+                Inserted = validated.Count,
                 InsertedDtos = validated.Cast<object>().ToList()
             });
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Unhandled error validating batch {batchId}", batchMsg.BatchId);
-            await SendAck(msg.ReplyTo, new BatchAckResponse { BatchId = batchMsg.BatchId });
+            await SendAck(msg.ReplyTo, new BatchAckResponse 
+            { 
+                BatchId = batchMsg.BatchId,
+                Success = false,
+                Inserted = 0
+            });
         }
     }
 
@@ -172,16 +215,22 @@ public class AppointmentValidatorService(
     /// <param name="ack">The acknowledgment object containing the batch ID and inserted count.</param>
     private async Task SendAck(string? replyTo, BatchAckResponse ack)
     {
-        if (string.IsNullOrEmpty(replyTo)) return;
+        if (string.IsNullOrEmpty(replyTo))
+        {
+            logger.LogWarning("No replyTo address provided, cannot send ACK for batch {batchId}", ack.BatchId);
+            return;
+        }
 
         try
         {
             var payload = JsonSerializer.SerializeToUtf8Bytes(ack);
             await connection.PublishAsync(replyTo, payload);
+            logger.LogInformation("Sent ACK to {replyTo} for batch {batchId}: Success={success}, Inserted={inserted}", 
+                replyTo, ack.BatchId, ack.Success, ack.Inserted);
         }
         catch (Exception ex)
         {
-            logger.LogWarning(ex, "Failed to send ack to {replyTo}", replyTo);
+            logger.LogError(ex, "Failed to send ack to {replyTo} for batch {batchId}", replyTo, ack.BatchId);
         }
     }
 }

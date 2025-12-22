@@ -36,7 +36,7 @@ public class AppointmentEfRepository(PolyclinicDbContext ctx) : IRepository<Appo
 
     public List<Appointment> ReadAll()
     {
-        var appointments = ctx.Appointments.ToList();
+        var appointments = ctx.Appointments.OrderBy(a => a.Id).ToList();
         if (appointments.Count == 0) return appointments;
 
         var patientDict = ctx.Patients.ToList().ToDictionary(p => p.Id);

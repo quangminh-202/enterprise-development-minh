@@ -1,0 +1,212 @@
+@inject PolyclinicApiWrapper PolyclinicApi
+@inject IJSRuntime JSRuntime
+
+<Card>
+    <CardHeader>
+        <Row Class="justify-content-between">
+            <Column ColumnSize="ColumnSize.IsAuto">
+                <h4>Appointment Management</h4>
+            </Column>
+            <Column ColumnSize="ColumnSize.IsAuto">
+                <Button Color="Color.Primary" Clicked="OpenCreateModal">
+                    <Icon Name="IconName.Add" /> Add New
+                </Button>
+                <Button Color="Color.Secondary" Clicked="RefreshData">
+                    <Icon Name="IconName.Sync" /> Refresh
+                </Button>
+            </Column>
+        </Row>
+    </CardHeader>
+    <CardBody>
+        <DataGrid TItem="AppointmentDto"
+                  Data="Appointments"
+                  Responsive
+                  Striped
+                  Hoverable
+                  ShowPager
+                  PageSize="10">
+            <DataGridColumns>
+                <DataGridColumn Width="150px"
+                                TItem="AppointmentDto"
+                                Field="@nameof(AppointmentDto.Id)"
+                                Caption="Actions"
+                                Sortable="false">
+                    <DisplayTemplate>
+                        <Dropdown>
+                            <DropdownToggle Color="Color.Primary" Size="Size.Small">
+                                <Icon Name="IconName.Settings" /> Actions
+                            </DropdownToggle>
+                            <DropdownMenu>
+                                <DropdownItem Clicked="() => OpenEditModal(context)">
+                                    <Icon Name="IconName.Edit" /> Edit
+                                </DropdownItem>
+                                <DropdownDivider />
+                                <DropdownItem Clicked="() => DeleteAppointmentAsync(context)" TextColor="TextColor.Danger">
+                                    <Icon Name="IconName.Delete" /> Delete
+                                </DropdownItem>
+                            </DropdownMenu>
+                        </Dropdown>
+                    </DisplayTemplate>
+                </DataGridColumn>
+                
+                <DataGridColumn TItem="AppointmentDto"
+                                Field="@nameof(AppointmentDto.Id)"
+                                Caption="ID"
+                                Sortable
+                                Width="80px">
+                    <DisplayTemplate>
+                        <Badge Color="Color.Primary">
+                            @context.Id
+                        </Badge>
+                    </DisplayTemplate>
+                </DataGridColumn>
+                
+                <DataGridColumn TItem="AppointmentDto"
+                                Field="@nameof(AppointmentDto.Date)"
+                                Caption="Date & Time"
+                                Sortable>
+                    <DisplayTemplate>
+                        <div>
+                            <Icon Name="IconName.Calendar" Class="me-1" />
+                            <strong>@context.Date.ToString("dd/MM/yyyy")</strong>
+                            <br />
+                            <Icon Name="IconName.Clock" Class="me-1" />
+                            <small class="text-muted">@context.Date.ToString("HH:mm")</small>
+                        </div>
+                    </DisplayTemplate>
+                </DataGridColumn>
+                
+                <DataGridColumn TItem="AppointmentDto"
+                                Field="@nameof(AppointmentDto.Room)"
+                                Caption="Room"
+                                Sortable>
+                    <DisplayTemplate>
+                        <Badge Color="Color.Info">
+                            <Icon Name="IconName.Home" /> Room @context.Room
+                        </Badge>
+                    </DisplayTemplate>
+                </DataGridColumn>
+                
+                <DataGridColumn TItem="AppointmentDto"
+                                Field="@nameof(AppointmentDto.DoctorName)"
+                                Caption="Doctor"
+                                Sortable>
+                    <DisplayTemplate>
+                        <div class="d-flex align-items-center">
+                            <Icon Name="IconName.User" Class="me-2 text-success" />
+                            <div>
+                                <strong>@context.DoctorName</strong>
+                            </div>
+                        </div>
+                    </DisplayTemplate>
+                </DataGridColumn>
+                
+                <DataGridColumn TItem="AppointmentDto"
+                                Field="@nameof(AppointmentDto.PatientName)"
+                                Caption="Patient"
+                                Sortable>
+                    <DisplayTemplate>
+                        <div class="d-flex align-items-center">
+                            <Icon Name="IconName.User" Class="me-2 text-primary" />
+                            <div>
+                                <strong>@context.PatientName</strong>
+                            </div>
+                        </div>
+                    </DisplayTemplate>
+                </DataGridColumn>
+                
+                <DataGridColumn TItem="AppointmentDto"
+                                Field="@nameof(AppointmentDto.IsRepeated)"
+                                Caption="Repeated Visit"
+                                Sortable>
+                    <DisplayTemplate>
+                        @if (context.IsRepeated)
+                        {
+                            <Badge Color="Color.Success">
+                                Yes
+                            </Badge>
+                        }
+                        else
+                        {
+                            <Badge Color="Color.Secondary">
+                                <Icon Name="IconName.Times" /> No
+                            </Badge>
+                        }
+                    </DisplayTemplate>
+                </DataGridColumn>
+            </DataGridColumns>
+            
+            <LoadingTemplate>
+                <div class="text-center p-4">
+                    <p class="mt-2">Loading appointments...</p>
+                </div>
+            </LoadingTemplate>
+            
+            <EmptyTemplate>
+                <div class="text-center p-4">
+                    <Icon Name="IconName.Calendar" Style="font-size: 3rem; color: #ccc;" />
+                    <h5 class="mt-3">No appointments found</h5>
+                    <p class="text-muted">Click "Add New" button to schedule the first appointment</p>
+                </div>
+            </EmptyTemplate>
+        </DataGrid>
+    </CardBody>
+</Card>
+
+<AppointmentCreateModal @ref="AppointmentCreateModal" OnAppointmentSaved="@HandleAppointmentSaved" />
+
+@code {
+    [Parameter] public EventCallback OnDataChanged { get; set; }
+
+    private IList<AppointmentDto> Appointments { get; set; } = new List<AppointmentDto>();
+    private AppointmentCreateModal AppointmentCreateModal { get; set; } = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await RefreshData();
+    }
+
+    private async Task RefreshData()
+    {
+        try
+        {
+            var appointments = await PolyclinicApi.GetAllAppointments();
+            Appointments = appointments?.ToList() ?? new List<AppointmentDto>();
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", $"Error loading appointments: {ex.Message}");
+        }
+    }
+
+    private Task OpenCreateModal() => AppointmentCreateModal.Show();
+
+    private Task OpenEditModal(AppointmentDto appointment) => AppointmentCreateModal.Show(appointment);
+
+    private async Task DeleteAppointmentAsync(AppointmentDto appointment)
+    {
+        var confirmed = await JSRuntime.InvokeAsync<bool>("confirm", 
+            $"Are you sure you want to delete appointment for {appointment.PatientName} with {appointment.DoctorName}?");
+        
+        if (confirmed)
+        {
+            try
+            {
+                await PolyclinicApi.DeleteAppointment(appointment.Id);
+                
+                await RefreshData();
+                await OnDataChanged.InvokeAsync();
+            }
+            catch (Exception ex)
+            {
+                await JSRuntime.InvokeVoidAsync("alert", $"Error deleting appointment: {ex.Message}");
+            }
+        }
+    }
+
+    private async Task HandleAppointmentSaved()
+    {
+        await RefreshData();
+        await OnDataChanged.InvokeAsync();
+    }
+}

@@ -1,0 +1,122 @@
+@inject PolyclinicApiWrapper PolyclinicApi
+@inject IJSRuntime JSRuntime
+
+<Card>
+    <CardHeader>
+        <Row Class="justify-content-between align-items-center">
+            <Column ColumnSize="ColumnSize.IsAuto">
+                <h5 class="mb-0">
+                    <Icon Name="IconName.Users" Class="text-warning me-2" />
+                    Patients with Multiple Doctors
+                </h5>
+            </Column>
+            <Column ColumnSize="ColumnSize.IsAuto">
+                <Row Class="g-2 align-items-center">
+                    <Column ColumnSize="ColumnSize.IsAuto">
+                        <small class="text-muted">Age ≥</small>
+                    </Column>
+                    <Column ColumnSize="ColumnSize.IsAuto">
+                        <NumericEdit @bind-Value="MinAge" 
+                                   Min="0" 
+                                   Max="100" 
+                                   Size="Size.Small" 
+                                   Style="width: 80px;" />
+                    </Column>
+                    <Column ColumnSize="ColumnSize.IsAuto">
+                        <Button Color="Color.Primary" 
+                                Size="Size.Small" 
+                                Clicked="LoadData"
+                                Loading="IsLoading">
+                            <Icon Name="IconName.Search" /> Load
+                        </Button>
+                    </Column>
+                </Row>
+            </Column>
+        </Row>
+    </CardHeader>
+    <CardBody>
+        @if (IsLoading)
+        {
+            <div class="text-center p-3">
+                <p class="mt-2 text-muted">Loading patients with multiple doctors...</p>
+            </div>
+        }
+        else if (Patients != null && Patients.Any())
+        {
+            <DataGrid TItem="PatientAnalyticsDto"
+                      Data="Patients"
+                      Responsive
+                      ShowPager="false"
+                      Striped>
+                <DataGridColumns>
+                    <DataGridColumn TItem="PatientAnalyticsDto"
+                                    Field="@nameof(PatientAnalyticsDto.FullName)"
+                                    Caption="Patient Name">
+                        <DisplayTemplate>
+                            <div class="d-flex align-items-center">
+                                <Icon Name="IconName.User" Class="text-primary me-2" />
+                                <strong>@context.FullName</strong>
+                            </div>
+                        </DisplayTemplate>
+                    </DataGridColumn>
+                    
+                    <DataGridColumn TItem="PatientAnalyticsDto"
+                                    Field="@nameof(PatientAnalyticsDto.Age)"
+                                    Caption="Age">
+                        <DisplayTemplate>
+                            <Badge Color="Color.Info">@context.Age years</Badge>
+                        </DisplayTemplate>
+                    </DataGridColumn>
+                    
+                    <DataGridColumn TItem="PatientAnalyticsDto"
+                                    Field="@nameof(PatientAnalyticsDto.DoctorCount)"
+                                    Caption="Doctors Count">
+                        <DisplayTemplate>
+                            <Badge Color="Color.Success">
+                                <Icon Name="IconName.Users" /> @context.DoctorCount doctors
+                            </Badge>
+                        </DisplayTemplate>
+                    </DataGridColumn>
+                </DataGridColumns>
+            </DataGrid>
+        }
+        else
+        {
+            <Alert Color="Color.Info" Visible>
+                <Icon Name="IconName.InfoCircle" Class="me-2" />
+                No patients older than @MinAge with multiple doctors found.
+            </Alert>
+        }
+    </CardBody>
+</Card>
+
+@code {
+    [Parameter] public int MinAge { get; set; } = 30;
+    [Parameter] public EventCallback<int> MinAgeChanged { get; set; }
+
+    private IList<PatientAnalyticsDto> Patients { get; set; } = new List<PatientAnalyticsDto>();
+    private bool IsLoading { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        IsLoading = true;
+        try
+        {
+            var patients = await PolyclinicApi.GetPatientsOlderThanWithMultipleDoctors(MinAge);
+            Patients = patients.OrderByDescending(p => p.DoctorCount).ThenBy(p => p.FullName).ToList();
+        }
+        catch
+        {
+            Patients = new List<PatientAnalyticsDto>();
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+}

@@ -1,0 +1,276 @@
+@inject PolyclinicApiWrapper PolyclinicApi
+@inject IJSRuntime JSRuntime
+
+<!-- Bootstrap Modal -->
+<div class="modal fade" id="patientModal" tabindex="-1" aria-labelledby="patientModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="patientModalLabel">
+                    @(IsEditing ? "Edit Patient" : "New Patient")
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                @if (!string.IsNullOrEmpty(ErrorMessage))
+                {
+                    <div class="alert alert-danger" role="alert">
+                        @ErrorMessage
+                    </div>
+                }
+                <form>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">CCCD/Passport *</label>
+                                <input type="text" class="form-control" 
+                                       @bind="PatientForm.Passport" 
+                                       placeholder="Enter ID card or Passport number" />
+                                @if (string.IsNullOrWhiteSpace(PatientForm.Passport))
+                                {
+                                    <small class="text-danger">Passport is required.</small>
+                                }
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Full Name *</label>
+                                <input type="text" class="form-control" 
+                                       @bind="PatientForm.FullName" 
+                                       placeholder="Enter full name" />
+                                @if (string.IsNullOrWhiteSpace(PatientForm.FullName))
+                                {
+                                    <small class="text-danger">Full name is required.</small>
+                                }
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Gender *</label>
+                                <select class="form-select" @bind="PatientForm.Gender">
+                                    <option value="Male">Male</option>
+                                    <option value="Female">Female</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Birth Date *</label>
+                                <input type="date" class="form-control" 
+                                       @bind="PatientForm.BirthDate" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Phone Number *</label>
+                                <input type="tel" class="form-control" 
+                                       @bind="PatientForm.Phone" 
+                                       placeholder="0xxx-xxx-xxx" />
+                                @if (string.IsNullOrWhiteSpace(PatientForm.Phone))
+                                {
+                                    <small class="text-danger">Phone number is required.</small>
+                                }
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Address *</label>
+                                <input type="text" class="form-control" @bind="PatientForm.Address" 
+                                       placeholder="Enter address" />
+                                @if (string.IsNullOrWhiteSpace(PatientForm.Address))
+                                {
+                                    <small class="text-danger">Address is required.</small>
+                                }
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Blood Type *</label>
+                                <select class="form-select" @bind="PatientForm.BloodType">
+                                    <option value="A">A</option>
+                                    <option value="B">B</option>
+                                    <option value="Ab">AB</option>
+                                    <option value="O">O</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Rh Factor *</label>
+                                <select class="form-select" @bind="PatientForm.RhFactor">
+                                    <option value="Positive">Positive (+)</option>
+                                    <option value="Negative">Negative (-)</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" @onclick="ResetForm">Cancel</button>
+                <button type="button" class="btn btn-primary" @onclick="SavePatientAsync" 
+                        disabled="@(!IsFormValid() || IsSaving)">
+                    @if (IsSaving)
+                    {
+                        <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                    }
+                    @(IsEditing ? "Update" : "Create")
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public EventCallback OnPatientSaved { get; set; }
+
+    private CreateUpdatePatientDto PatientForm { get; set; } = new()
+    {
+        Passport = "",
+        FullName = "",
+        Gender = "Male",
+        BloodType = "A",
+        RhFactor = "Positive",
+        BirthDate = DateTime.Today.AddYears(-30),
+        Address = "",
+        Phone = ""
+    };
+    private PatientDto? EditingPatient { get; set; }
+    private bool IsEditing => EditingPatient != null;
+    private bool IsSaving { get; set; } = false;
+    private string? ErrorMessage { get; set; }
+
+    public async Task Show(PatientDto? patient = null)
+    {
+        try
+        {
+            EditingPatient = patient;
+            ErrorMessage = null;
+            IsSaving = false;
+            
+            if (IsEditing)
+            {
+                PatientForm = new CreateUpdatePatientDto
+                {
+                    Passport = patient!.Passport ?? "",
+                    FullName = patient.FullName ?? "",
+                    Gender = patient.Gender ?? "Male",
+                    BirthDate = patient.BirthDate,
+                    Address = patient.Address ?? "",
+                    BloodType = patient.BloodType ?? "A",
+                    RhFactor = patient.RhFactor ?? "Positive",
+                    Phone = patient.Phone ?? ""
+                };
+            }
+            else
+            {
+                PatientForm = new CreateUpdatePatientDto
+                {
+                    Passport = "",
+                    FullName = "",
+                    Gender = "Male",
+                    BloodType = "A",
+                    RhFactor = "Positive",
+                    BirthDate = DateTime.Today.AddYears(-30),
+                    Address = "",
+                    Phone = ""
+                };
+            }
+            
+            var bootstrapExists = await JSRuntime.InvokeAsync<bool>("eval", "typeof bootstrap !== 'undefined'");
+            
+            if (bootstrapExists)
+            {
+                await JSRuntime.InvokeVoidAsync("eval", "new bootstrap.Modal(document.getElementById('patientModal')).show()");
+            }
+            else
+            {
+                await JSRuntime.InvokeVoidAsync("eval", "$('#patientModal').modal('show')");
+            }
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"Error opening modal: {ex.Message}";
+        }
+    }
+
+    private async Task ClosePatientModalAsync()
+    {
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("eval", "bootstrap.Modal.getInstance(document.getElementById('patientModal'))?.hide()");
+        }
+        catch
+        {
+            await JSRuntime.InvokeVoidAsync("eval", "$('#patientModal').modal('hide')");
+        }
+        ResetForm();
+    }
+
+    private void ResetForm()
+    {
+        EditingPatient = null;
+        ErrorMessage = null;
+        IsSaving = false;
+        PatientForm = new CreateUpdatePatientDto
+        {
+            Passport = "",
+            FullName = "",
+            Gender = "Male",
+            BloodType = "A",
+            RhFactor = "Positive",
+            BirthDate = DateTime.Today.AddYears(-30),
+            Address = "",
+            Phone = ""
+        };
+        StateHasChanged();
+    }
+
+    private bool IsFormValid() =>
+        !string.IsNullOrWhiteSpace(PatientForm.Passport) &&
+        !string.IsNullOrWhiteSpace(PatientForm.FullName) &&
+        !string.IsNullOrWhiteSpace(PatientForm.Phone) &&
+        !string.IsNullOrWhiteSpace(PatientForm.Address);
+
+    private async Task SavePatientAsync()
+    {
+        if (!IsFormValid() || IsSaving) return;
+
+        IsSaving = true;
+        ErrorMessage = null;
+        StateHasChanged();
+
+        try
+        {
+            if (IsEditing)
+            {
+                await PolyclinicApi.UpdatePatient(EditingPatient!.Id, PatientForm);
+            }
+            else
+            {
+                await PolyclinicApi.CreatePatient(PatientForm);
+            }
+
+            await ClosePatientModalAsync();
+            await OnPatientSaved.InvokeAsync();
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"Error saving patient: {ex.Message}";
+        }
+        finally
+        {
+            IsSaving = false;
+            StateHasChanged();
+        }
+    }
+}

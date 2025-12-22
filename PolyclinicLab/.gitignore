@@ -143,3 +143,8 @@ ModelManifest.xml
 
 # Old AppHost folder
 Polyclinic.AppHost/Polyclinic.AppHost.AppHost/
+# Backup files
+*.bak
+*.backup
+*.tmp
+*~

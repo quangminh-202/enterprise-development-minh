@@ -28,7 +28,7 @@ public class PatientEfRepository(PolyclinicDbContext ctx) : IRepository<Patient,
     public Patient? Read(int id) => 
         ctx.Patients.FirstOrDefault(p => p.Id == id);
 
-    public List<Patient> ReadAll() => [.. ctx.Patients];
+    public List<Patient> ReadAll() => [.. ctx.Patients.OrderBy(p => p.Id)];
 
     public Patient Update(Patient entity)
     {

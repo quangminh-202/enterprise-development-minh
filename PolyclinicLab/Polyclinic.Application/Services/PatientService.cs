@@ -6,7 +6,10 @@ using Polyclinic.Domain.Interfaces;
 
 namespace Polyclinic.Application.Services;
 
-public class PatientService(IRepository<Patient, int> repo, IMapper mapper) : IPatientService
+public class PatientService(
+    IRepository<Patient, int> repo, 
+    IRepository<Appointment, int> appointmentRepo,
+    IMapper mapper) : IPatientService
 {
     public List<PatientDto> GetAll() => mapper.Map<List<PatientDto>>(repo.ReadAll());
     
@@ -29,5 +32,16 @@ public class PatientService(IRepository<Patient, int> repo, IMapper mapper) : IP
         return mapper.Map<PatientDto>(updatedPatient);
     }
     
-    public bool Delete(int id) => repo.Delete(id);
+    public bool Delete(int id)
+    {
+        // First, delete all appointments for this patient
+        var appointments = appointmentRepo.ReadAll().Where(a => a.PatientId == id).ToList();
+        foreach (var appointment in appointments)
+        {
+            appointmentRepo.Delete(appointment.Id);
+        }
+        
+        // Then delete the patient
+        return repo.Delete(id);
+    }
 }

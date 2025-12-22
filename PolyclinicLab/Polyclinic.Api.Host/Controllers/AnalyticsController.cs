@@ -106,9 +106,9 @@ public class AnalyticsController(IAnalyticsService analyticsService, ILogger<Ana
     /// (5) Returns all appointments scheduled in a specific room (default = 101)
     /// within the current month.
     /// </summary>
-    [HttpGet("appointments-in-room")]
+    [HttpGet("appointments-in-room/{room:int}")]
     public ActionResult<List<AppointmentDto>> GetAppointmentsInRoom(
-         [FromQuery][Range(1, int.MaxValue, ErrorMessage = "Room number must be greater than 0.")] int room = 101)
+         [Range(1, int.MaxValue, ErrorMessage = "Room number must be greater than 0.")] int room = 101)
     {
         try
         {

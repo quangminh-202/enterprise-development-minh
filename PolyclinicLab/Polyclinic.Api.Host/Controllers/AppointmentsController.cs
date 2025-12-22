@@ -9,7 +9,7 @@ namespace Polyclinic.Api.Host.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/[controller]")]
-public class AppointmentController(IAppointmentService service, ILogger<AppointmentController> logger) : ControllerBase
+public class AppointmentsController(IAppointmentService service, ILogger<AppointmentsController> logger) : ControllerBase
 {
     /// <summary>
     /// Returns a list of all appointments.
@@ -85,7 +85,7 @@ public class AppointmentController(IAppointmentService service, ILogger<Appointm
             var createdAppointment = service.Create(dto);
             logger.LogInformation("Successfully created appointment {Id} for doctor {DoctorId} and patient {PatientId}", 
                 createdAppointment.Id, dto.DoctorId, dto.PatientId);
-            return CreatedAtAction(nameof(Get), new { id = createdAppointment.Id }, createdAppointment);
+            return Ok(createdAppointment);
         }
         catch (ArgumentException ex)
         {

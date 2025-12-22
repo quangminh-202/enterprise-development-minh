@@ -1,0 +1,145 @@
+@inject PolyclinicApiWrapper PolyclinicApi
+@inject IJSRuntime JSRuntime
+
+<Card>
+    <CardHeader>
+        <Row Class="justify-content-between align-items-center">
+            <Column ColumnSize="ColumnSize.IsAuto">
+                <h5 class="mb-0">
+                    <Icon Name="IconName.Users" Class="text-primary me-2" />
+                    Patients by Doctor
+                </h5>
+            </Column>
+            <Column ColumnSize="ColumnSize.IsAuto">
+                <Row Class="g-2 align-items-center">
+                    <Column ColumnSize="ColumnSize.IsAuto">
+                        <Select @bind-SelectedValue="SelectedDoctorId" Size="Size.Small">
+                            <SelectItem Value="0">-- Select Doctor --</SelectItem>
+                            @if (Doctors != null)
+                            {
+                                @foreach (var doctor in Doctors)
+                                {
+                                    <SelectItem Value="@doctor.Id">
+                                        @doctor.FullName
+                                    </SelectItem>
+                                }
+                            }
+                        </Select>
+                    </Column>
+                    <Column ColumnSize="ColumnSize.IsAuto">
+                        <Button Color="Color.Primary" 
+                                Size="Size.Small" 
+                                Clicked="LoadData"
+                                Loading="IsLoading"
+                                Disabled="SelectedDoctorId == 0">
+                            <Icon Name="IconName.Search" /> Load
+                        </Button>
+                    </Column>
+                </Row>
+            </Column>
+        </Row>
+    </CardHeader>
+    <CardBody>
+        @if (IsLoading)
+        {
+            <div class="text-center p-3">
+                <p class="mt-2 text-muted">Loading patients...</p>
+            </div>
+        }
+        else if (Patients != null && Patients.Any())
+        {
+            <DataGrid TItem="PatientDto"
+                      Data="Patients"
+                      Responsive
+                      ShowPager="false"
+                      Striped>
+                <DataGridColumns>
+                    <DataGridColumn TItem="PatientDto"
+                                    Field="@nameof(PatientDto.FullName)"
+                                    Caption="Patient Name">
+                        <DisplayTemplate>
+                            <div class="d-flex align-items-center">
+                                <Icon Name="IconName.User" Class="text-primary me-2" />
+                                <strong>@context.FullName</strong>
+                            </div>
+                        </DisplayTemplate>
+                    </DataGridColumn>
+                    
+                    <DataGridColumn TItem="PatientDto"
+                                    Field="@nameof(PatientDto.Passport)"
+                                    Caption="ID">
+                        <DisplayTemplate>
+                            <Badge Color="Color.Info">@context.Passport</Badge>
+                        </DisplayTemplate>
+                    </DataGridColumn>
+                    
+                    <DataGridColumn TItem="PatientDto"
+                                    Field="@nameof(PatientDto.Phone)"
+                                    Caption="Phone">
+                        <DisplayTemplate>
+                            <Icon Name="IconName.Phone" /> @context.Phone
+                        </DisplayTemplate>
+                    </DataGridColumn>
+                </DataGridColumns>
+            </DataGrid>
+        }
+        else if (SelectedDoctorId > 0)
+        {
+            <Alert Color="Color.Info" Visible>
+                <Icon Name="IconName.InfoCircle" Class="me-2" />
+                No patients found for the selected doctor.
+            </Alert>
+        }
+        else
+        {
+            <Alert Color="Color.Secondary" Visible>
+                <Icon Name="IconName.InfoCircle" Class="me-2" />
+                Please select a doctor to view their patients.
+            </Alert>
+        }
+    </CardBody>
+</Card>
+
+@code {
+    private IList<PatientDto> Patients { get; set; } = new List<PatientDto>();
+    private IList<DoctorDto> Doctors { get; set; } = new List<DoctorDto>();
+    private int SelectedDoctorId { get; set; } = 0;
+    private bool IsLoading { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDoctors();
+    }
+
+    private async Task LoadDoctors()
+    {
+        try
+        {
+            var doctors = await PolyclinicApi.GetAllDoctors();
+            Doctors = doctors.OrderBy(d => d.FullName).ToList();
+        }
+        catch
+        {
+        }
+    }
+
+    private async Task LoadData()
+    {
+        if (SelectedDoctorId == 0) return;
+
+        IsLoading = true;
+        try
+        {
+            var patients = await PolyclinicApi.GetPatientsByDoctor(SelectedDoctorId);
+            Patients = patients.ToList();
+        }
+        catch
+        {
+            Patients = new List<PatientDto>();
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+}

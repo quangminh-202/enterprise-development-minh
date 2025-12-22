@@ -24,6 +24,9 @@ public class PatientMappingProfile : Profile
 
         // CreateUpdatePatientDto -> Patient
         CreateMap<CreateUpdatePatientDto, Patient>()
-            .ForMember(dest => dest.Id, opt => opt.Ignore());
+            .ForMember(dest => dest.Id, opt => opt.Ignore())
+            .ForMember(dest => dest.Gender, opt => opt.MapFrom(src => Enum.Parse<Gender>(src.Gender)))
+            .ForMember(dest => dest.BloodType, opt => opt.MapFrom(src => Enum.Parse<BloodType>(src.BloodType)))
+            .ForMember(dest => dest.RhFactor, opt => opt.MapFrom(src => Enum.Parse<RhFactor>(src.RhFactor)));
     }
 }

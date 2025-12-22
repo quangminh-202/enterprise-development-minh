@@ -1,0 +1,18 @@
+@page "/doctors"
+
+<PageTitle>Doctor Management</PageTitle>
+
+<Container Fluid>
+    <Breadcrumb>
+        <BreadcrumbItem>
+            <BreadcrumbLink To="/">
+                <Icon Name="IconName.Home" /> Home
+            </BreadcrumbLink>
+        </BreadcrumbItem>
+        <BreadcrumbItem Active>
+            <Icon Name="IconName.User" /> Doctors
+        </BreadcrumbItem>
+    </Breadcrumb>
+
+    <DoctorDataGrid />
+</Container>

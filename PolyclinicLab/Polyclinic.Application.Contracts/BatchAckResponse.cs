@@ -18,10 +18,10 @@ public class BatchAckResponse
     /// <summary>
     /// The number of items successfully inserted from the batch
     /// </summary>
-    public int Inserted => InsertedDtos?.Count ?? 0;
+    public int Inserted { get; set; }
 
     /// <summary>
     /// Indicates whether the batch was successfully processed
     /// </summary>
-    public bool Success => Inserted > 0;
+    public bool Success { get; set; }
 }

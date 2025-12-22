@@ -33,10 +33,11 @@ builder.AddProject<Projects.Polyclinic_Generator_Nats_Host>("generator")
        .WaitFor(nats)
        .WithEnvironment("Nats:StreamName", natsStream)
        .WithEnvironment("Nats:RawSubject", rawSubject)
+       .WithEnvironment("Nats:ValidatedSubject", validatedSubject)
        .WithExternalHttpEndpoints();
 
 // Add API Host with MongoDB and NATS (includes Validator)
-builder.AddProject<Projects.Polyclinic_Api_Host>("api")
+var apiHost = builder.AddProject<Projects.Polyclinic_Api_Host>("api")
        .WithReference(mongo)
        .WithReference(nats)
        .WaitFor(mongo)
@@ -45,5 +46,10 @@ builder.AddProject<Projects.Polyclinic_Api_Host>("api")
        .WithEnvironment("Nats:RawSubject", rawSubject)
        .WithEnvironment("Nats:ValidatedSubject", validatedSubject)
        .WithExternalHttpEndpoints();
+
+// Add Client Application
+var client = builder.AddProject<Projects.Polyclinic_Client_Wasm>("polyclinic-client")
+       .WithReference(apiHost)
+       .WaitFor(apiHost);
 
 builder.Build().Run();

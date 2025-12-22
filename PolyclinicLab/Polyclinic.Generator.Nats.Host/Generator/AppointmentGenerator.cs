@@ -15,12 +15,13 @@ public static class AppointmentGenerator
     /// <returns>A list of randomly generated <see cref="CreateUpdateAppointmentDto"/> instances.</returns>
     public static IList<CreateUpdateAppointmentDto> GenerateAppointments(int count) =>
         new Faker<CreateUpdateAppointmentDto>()
-            .CustomInstantiator(f => new CreateUpdateAppointmentDto(
-                f.Date.Between(DateTime.Now.AddDays(-90), DateTime.Now.AddDays(90)),
-                f.Random.Int(0, 200),
-                f.Random.Bool(0.4f),
-                f.Random.Int(1, 50),
-                f.Random.Int(1, 50)
-            ))
+            .CustomInstantiator(f => new CreateUpdateAppointmentDto
+            {
+                Date = f.Date.Between(DateTime.Now.AddDays(-90), DateTime.Now.AddDays(90)),
+                Room = f.Random.Int(101, 200), 
+                IsRepeated = f.Random.Bool(0.4f),
+                DoctorId = f.Random.Int(1, 10),
+                PatientId = f.Random.Int(1, 10) // Database chỉ có 10 patients (ID: 1-10)
+            })
             .Generate(count);
 }

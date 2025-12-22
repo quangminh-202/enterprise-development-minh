@@ -20,6 +20,17 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddAutoMapper(typeof(AppointmentMappingProfile));
 
+// Add CORS for Client WASM
+builder.Services.AddCors(options =>
+{
+    options.AddDefaultPolicy(policy =>
+    {
+        policy.AllowAnyOrigin()
+              .AllowAnyMethod()
+              .AllowAnyHeader();
+    });
+});
+
 // MongoDB configuration (without Aspire client to avoid version conflict)
 var mongoConnectionString = builder.Configuration.GetConnectionString("polyclinic") 
     ?? "mongodb://localhost:27017";
@@ -69,6 +80,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+app.UseCors();
 app.MapGet("/", () => Results.Redirect("/swagger")).ExcludeFromDescription();
 app.MapDefaultEndpoints();
 app.MapControllers();

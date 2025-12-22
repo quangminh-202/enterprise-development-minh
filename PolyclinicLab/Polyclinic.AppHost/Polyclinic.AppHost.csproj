@@ -21,6 +21,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Polyclinic.Api.Host\Polyclinic.Api.Host.csproj" />
     <ProjectReference Include="..\Polyclinic.Generator.Nats.Host\Polyclinic.Generator.Nats.Host.csproj" />
+    <ProjectReference Include="..\Polyclinic.Client.Wasm\Polyclinic.Client.Wasm.csproj" />
   </ItemGroup>
 
 </Project>

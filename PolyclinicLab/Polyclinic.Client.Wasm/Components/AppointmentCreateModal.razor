@@ -1,0 +1,323 @@
+@inject PolyclinicApiWrapper PolyclinicApi
+@inject IJSRuntime JSRuntime
+
+<!-- Bootstrap Modal -->
+<div class="modal fade" id="appointmentModal" tabindex="-1" aria-labelledby="appointmentModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="appointmentModalLabel">
+                    @if (IsEditing)
+                    {
+                        <span>Edit Appointment</span>
+                    }
+                    else
+                    {
+                        <span>New Appointment</span>
+                    }
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                @if (!string.IsNullOrEmpty(ErrorMessage))
+                {
+                    <div class="alert alert-danger" role="alert">
+                        @ErrorMessage
+                    </div>
+                }
+                <form>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Appointment Date *</label>
+                                <input type="date" class="form-control" 
+                                       value="@NewAppointment.Date.ToString("yyyy-MM-dd")"
+                                       @onchange="@((ChangeEventArgs e) => OnDateChanged(e.Value?.ToString()))" />
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Appointment Time *</label>
+                                <input type="time" class="form-control" 
+                                       value="@NewAppointment.Date.ToString("HH:mm")"
+                                       @onchange="@((ChangeEventArgs e) => OnTimeChanged(e.Value?.ToString()))" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Room Number *</label>
+                                <input type="number" class="form-control" 
+                                       @bind="NewAppointment.Room" 
+                                       placeholder="101" />
+                                @if (NewAppointment.Room <= 0)
+                                {
+                                    <small class="text-danger">Room number is required.</small>
+                                }
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Doctor *</label>
+                                <select class="form-select" @bind="NewAppointment.DoctorId" disabled="@LoadingDoctors">
+                                    <option value="0">-- Select Doctor --</option>
+                                    @if (Doctors != null)
+                                    {
+                                        @foreach (var doctor in Doctors)
+                                        {
+                                            <option value="@doctor.Id">
+                                                @doctor.FullName - @doctor.Specialization
+                                            </option>
+                                        }
+                                    }
+                                </select>
+                                @if (LoadingDoctors)
+                                {
+                                    <small class="text-muted">Loading doctors...</small>
+                                }
+                                else if (NewAppointment.DoctorId <= 0)
+                                {
+                                    <small class="text-danger">Please select a doctor.</small>
+                                }
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Patient *</label>
+                                <select class="form-select" @bind="NewAppointment.PatientId" disabled="@LoadingPatients">
+                                    <option value="0">-- Select Patient --</option>
+                                    @if (Patients != null)
+                                    {
+                                        @foreach (var patient in Patients)
+                                        {
+                                            <option value="@patient.Id">
+                                                @patient.FullName (@patient.Passport)
+                                            </option>
+                                        }
+                                    }
+                                </select>
+                                @if (LoadingPatients)
+                                {
+                                    <small class="text-muted">Loading patients...</small>
+                                }
+                                else if (NewAppointment.PatientId <= 0)
+                                {
+                                    <small class="text-danger">Please select a patient.</small>
+                                }
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <div class="form-check mt-4">
+                                    <input class="form-check-input" type="checkbox" @bind="NewAppointment.IsRepeated" id="isRepeated">
+                                    <label class="form-check-label" for="isRepeated">
+                                        This is a repeated visit
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" @onclick="ResetForm">Cancel</button>
+                <button type="button" class="btn btn-primary" @onclick="CreateAppointmentAsync" 
+                        disabled="@(!IsFormValid() || IsSaving)">
+                    @if (IsSaving)
+                    {
+                        <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                    }
+                    @(IsEditing ? "Update" : "Create")
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public EventCallback OnAppointmentSaved { get; set; }
+
+    private CreateUpdateAppointmentDto NewAppointment { get; set; } = new();
+    private AppointmentDto? EditingAppointment { get; set; }
+    private bool IsEditing => EditingAppointment != null;
+    private bool IsSaving { get; set; } = false;
+    private string? ErrorMessage { get; set; }
+    
+    private IList<DoctorDto> Doctors { get; set; } = new List<DoctorDto>();
+    private IList<PatientDto> Patients { get; set; } = new List<PatientDto>();
+    private bool LoadingDoctors { get; set; }
+    private bool LoadingPatients { get; set; }
+
+    private void OnDateChanged(string? value)
+    {
+        if (!string.IsNullOrEmpty(value) && DateTime.TryParse(value, out var date))
+        {
+            var time = NewAppointment.Date.TimeOfDay;
+            NewAppointment.Date = date.Date.Add(time);
+        }
+    }
+
+    private void OnTimeChanged(string? value)
+    {
+        if (!string.IsNullOrEmpty(value) && TimeSpan.TryParse(value, out var time))
+        {
+            NewAppointment.Date = NewAppointment.Date.Date.Add(time);
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDoctorsAndPatients();
+    }
+
+    public async Task Show(AppointmentDto? appointment = null)
+    {
+        try
+        {
+            EditingAppointment = appointment;
+            ErrorMessage = null;
+            IsSaving = false;
+            
+            if (IsEditing)
+            {
+                var doctor = Doctors.FirstOrDefault(d => d.FullName == appointment!.DoctorName);
+                var patient = Patients.FirstOrDefault(p => p.FullName == appointment!.PatientName);
+                
+                NewAppointment = new CreateUpdateAppointmentDto
+                {
+                    Date = appointment!.Date,
+                    Room = appointment.Room,
+                    DoctorId = doctor?.Id ?? 0,
+                    PatientId = patient?.Id ?? 0,
+                    IsRepeated = appointment.IsRepeated
+                };
+            }
+            else
+            {
+                NewAppointment = new CreateUpdateAppointmentDto
+                {
+                    Date = DateTime.Now.AddDays(1).Date.AddHours(9),
+                    Room = 101,
+                    DoctorId = 0,
+                    PatientId = 0,
+                    IsRepeated = false
+                };
+            }
+
+            var bootstrapExists = await JSRuntime.InvokeAsync<bool>("eval", "typeof bootstrap !== 'undefined'");
+            
+            if (bootstrapExists)
+            {
+                await JSRuntime.InvokeVoidAsync("eval", "new bootstrap.Modal(document.getElementById('appointmentModal')).show()");
+            }
+            else
+            {
+                await JSRuntime.InvokeVoidAsync("eval", "$('#appointmentModal').modal('show')");
+            }
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"Error opening modal: {ex.Message}";
+        }
+    }
+
+    private async Task CloseModalAsync()
+    {
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("eval", "bootstrap.Modal.getInstance(document.getElementById('appointmentModal'))?.hide()");
+        }
+        catch
+        {
+            await JSRuntime.InvokeVoidAsync("eval", "$('#appointmentModal').modal('hide')");
+        }
+        ResetForm();
+    }
+
+    private void ResetForm()
+    {
+        EditingAppointment = null;
+        ErrorMessage = null;
+        IsSaving = false;
+        NewAppointment = new CreateUpdateAppointmentDto
+        {
+            Date = DateTime.Now.AddDays(1).Date.AddHours(9),
+            Room = 101,
+            DoctorId = 0,
+            PatientId = 0,
+            IsRepeated = false
+        };
+    }
+
+    private async Task LoadDoctorsAndPatients()
+    {
+        LoadingDoctors = true;
+        LoadingPatients = true;
+        
+        try
+        {
+            var doctorsTask = PolyclinicApi.GetAllDoctors();
+            var patientsTask = PolyclinicApi.GetAllPatients();
+            
+            await Task.WhenAll(doctorsTask, patientsTask);
+            
+            Doctors = (await doctorsTask).ToList();
+            Patients = (await patientsTask).ToList();
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"Error loading data: {ex.Message}";
+        }
+        finally
+        {
+            LoadingDoctors = false;
+            LoadingPatients = false;
+            StateHasChanged();
+        }
+    }
+
+    private bool IsFormValid() =>
+        NewAppointment.Room > 0 &&
+        NewAppointment.DoctorId > 0 &&
+        NewAppointment.PatientId > 0 &&
+        !LoadingDoctors &&
+        !LoadingPatients;
+
+    private async Task CreateAppointmentAsync()
+    {
+        if (!IsFormValid() || IsSaving) return;
+
+        IsSaving = true;
+        ErrorMessage = null;
+        StateHasChanged();
+
+        try
+        {
+            if (IsEditing)
+            {
+                await PolyclinicApi.UpdateAppointment(EditingAppointment!.Id, NewAppointment);
+            }
+            else
+            {
+                await PolyclinicApi.CreateAppointment(NewAppointment);
+            }
+
+            await CloseModalAsync();
+            await OnAppointmentSaved.InvokeAsync();
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"Error saving appointment: {ex.Message}";
+        }
+        finally
+        {
+            IsSaving = false;
+            StateHasChanged();
+        }
+    }
+}

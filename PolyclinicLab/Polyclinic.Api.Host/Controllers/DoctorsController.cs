@@ -9,7 +9,7 @@ namespace Polyclinic.Api.Host.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/[controller]")]
-public class DoctorController(IDoctorService service, ILogger<DoctorController> logger) : ControllerBase
+public class DoctorsController(IDoctorService service, ILogger<DoctorsController> logger) : ControllerBase
 {
     /// <summary>
     /// Returns a list of all doctors.
@@ -96,7 +96,7 @@ public class DoctorController(IDoctorService service, ILogger<DoctorController> 
 
             var createdDoctor = service.Create(dto);
             logger.LogInformation("Successfully created doctor {Id}", createdDoctor.Id);
-            return CreatedAtAction(nameof(Get), new { id = createdDoctor.Id }, createdDoctor);
+            return Ok(createdDoctor);
         }
         catch (ArgumentException ex)
         {
@@ -168,6 +168,7 @@ public class DoctorController(IDoctorService service, ILogger<DoctorController> 
 
     /// <summary>
     /// Deletes a doctor record by ID.
+    /// Also deletes all appointments associated with this doctor.
     /// </summary>
     /// <param name="id">The ID of the doctor to delete.</param>
     [HttpDelete("{id}")]

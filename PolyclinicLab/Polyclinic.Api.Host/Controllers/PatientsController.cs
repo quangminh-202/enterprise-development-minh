@@ -9,7 +9,7 @@ namespace Polyclinic.Api.Host.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/[controller]")]
-public class PatientController(IPatientService service, ILogger<PatientController> logger) : ControllerBase
+public class PatientsController(IPatientService service, ILogger<PatientsController> logger) : ControllerBase
 {
     /// <summary>
     /// Returns a list of all patients.
@@ -102,7 +102,7 @@ public class PatientController(IPatientService service, ILogger<PatientControlle
 
             var createdPatient = service.Create(dto);
             logger.LogInformation("Successfully created patient {Id}", createdPatient.Id);
-            return CreatedAtAction(nameof(Get), new { id = createdPatient.Id }, createdPatient);
+            return Ok(createdPatient);
         }
         catch (ArgumentException ex)
         {
@@ -180,6 +180,7 @@ public class PatientController(IPatientService service, ILogger<PatientControlle
 
     /// <summary>
     /// Deletes a patient record by ID.
+    /// Also deletes all appointments associated with this patient.
     /// </summary>
     /// <param name="id">The ID of the patient to delete.</param>
     [HttpDelete("{id}")]
@@ -200,7 +201,7 @@ public class PatientController(IPatientService service, ILogger<PatientControlle
                 return NotFound($"Patient with Id = {id} was not found.");
             }
 
-            logger.LogInformation("Successfully deleted patient {Id}", id);
+            logger.LogInformation("Successfully deleted patient {Id} and associated appointments", id);
             return NoContent();
         }
         catch (Exception ex)

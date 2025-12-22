@@ -1,102 +1,103 @@
-# Лабораторная работа – Поликлиника
+# Система управления поликлиникой
 
-Данный репозиторий содержит лабораторную работу по предмету, посвящённую моделированию предметной области **Поликлиника**.  
-В проекте реализована распределённая микросервисная архитектура с использованием .NET Aspire, NATS JetStream для обмена сообщениями, MongoDB для хранения данных, а также Clean Architecture с разделением на слои Domain, Application и Infrastructure.
+Комплексная система управления здравоохранением, построенная на современных .NET технологиях и микросервисной архитектуре. Данный проект демонстрирует практики разработки корпоративного уровня с распределённой архитектурой, событийно-ориентированным дизайном и чётким разделением ответственности.
 
 ---
 
-## Описание проекта
+## Обзор проекта
 
-Проект моделирует работу информационной системы поликлиники с использованием современных подходов к разработке enterprise-приложений:
+Система управления поликлиникой представляет собой полнофункциональное healthcare-приложение со следующими возможностями:
 
-- **Микросервисная архитектура** с использованием .NET Aspire для оркестрации
-- **Event-driven подход** через NATS JetStream для асинхронной обработки данных
-- **Clean Architecture** с чётким разделением ответственности между слоями
-- **MongoDB** для персистентного хранения данных
-- **Background services** для валидации и обработки данных в реальном времени
+- **Микросервисная архитектура** с оркестрацией через .NET Aspire
+- **Событийно-ориентированный дизайн** с использованием NATS JetStream для обработки данных в реальном времени
+- **Clean Architecture** с чётким разделением между слоями Domain, Application и Infrastructure
+- **Современный веб-интерфейс** на базе Blazor WebAssembly и компонентов Blazorise
+- **MongoDB** для масштабируемого хранения данных
+- **Аналитика в реальном времени** и возможности отчётности
+- **Фоновые сервисы** для валидации данных и автоматизированной обработки
 
-Система включает генератор тестовых данных, валидатор appointments и REST API для работы с данными поликлиники.
+Система управляет пациентами, врачами, записями на приём и предоставляет комплексную аналитику для медицинских операций.
 
 ---
 
 ## Архитектура
 
-Проект построен на основе **Clean Architecture** и состоит из следующих компонентов:
+Проект следует принципам **Clean Architecture** и состоит из следующих компонентов:
 
-### Core слои
-- **Polyclinic.Domain** - доменные сущности (Doctor, Patient, Appointment)
+### Основные слои
+- **Polyclinic.Domain** - доменные сущности (Doctor, Patient, Appointment) и бизнес-правила
 - **Polyclinic.Application.Contracts** - DTO и контракты для обмена данными
-- **Polyclinic.Application** - бизнес-логика и use cases
+- **Polyclinic.Application** - бизнес-логика, сервисы и use cases
 
-### Infrastructure слои
-- **Polyclinic.Infrastructure.Mongo** - репозитории для работы с MongoDB
+### Инфраструктурные слои
+- **Polyclinic.Infrastructure.Mongo** - репозитории MongoDB и доступ к данным
 - **Polyclinic.Infrastructure.InMemory** - in-memory реализация для тестирования
-- **Polyclinic.Infrastructure.Nats** - consumer для обработки сообщений из NATS
+- **Polyclinic.Infrastructure.Nats** - NATS consumers и обработчики событий
 
 ### Микросервисы
-- **Polyclinic.Api.Host** - REST API для работы с данными поликлиники
-- **Polyclinic.Generator.Nats.Host** - генератор тестовых appointments с отправкой в NATS
-- **Polyclinic.Validator.Nats** - background service для валидации appointments
+- **Polyclinic.Api.Host** - REST API сервис для управления медицинскими данными
+- **Polyclinic.Generator.Nats.Host** - генератор тестовых данных с интеграцией NATS
+- **Polyclinic.Validator.Nats** - фоновый сервис для валидации записей на приём
 
-### Инфраструктура
-- **Polyclinic.AppHost** - .NET Aspire orchestrator для запуска всех сервисов
-- **Polyclinic.ServiceDefaults** - общие настройки для всех сервисов
-- **Polyclinic.Tests** - модульные тесты
+### Клиентские приложения
+- **Polyclinic.Client.Wasm** - современный Blazor WebAssembly frontend с адаптивным UI
+
+### Инфраструктура и оркестрация
+- **Polyclinic.AppHost** - .NET Aspire оркестратор для управления сервисами
+- **Polyclinic.ServiceDefaults** - общие конфигурации и сервисы
+- **Polyclinic.Tests** - комплексные unit и интеграционные тесты
 
 ---
 
 ## Технологический стек
 
-- **.NET 8.0**
-- **.NET Aspire** - оркестрация микросервисов
-- **NATS JetStream** - message broker для event-driven архитектуры
-- **MongoDB** - NoSQL база данных
+- **.NET 8.0** - основная платформа разработки
+- **.NET Aspire** - оркестрация микросервисов и управление конфигурацией
+- **Blazor WebAssembly** - современный SPA фронтенд
+- **Blazorise** - UI компоненты для Bootstrap
+- **NATS JetStream** - message broker для событийно-ориентированной архитектуры
+- **MongoDB** - NoSQL база данных для масштабируемого хранения
+- **AutoMapper** - маппинг между доменными объектами и DTO
 - **Bogus** - генерация тестовых данных
 - **xUnit** - модульное тестирование
-- **Swagger/OpenAPI** - документация API
+- **Swagger/OpenAPI** - документация и тестирование API
 
 ---
 
 ## Структура проекта
 
 ```
-PolyclinicLab
+PolyclinicLab/
 │
-├── Polyclinic.Domain                    # Доменные сущности
-├── Polyclinic.Application.Contracts     # DTO и контракты
-├── Polyclinic.Application               # Бизнес-логика
+├── Polyclinic.Domain/                    # Доменные сущности и бизнес-правила
+├── Polyclinic.Application.Contracts/     # DTO и контракты
+├── Polyclinic.Application/               # Бизнес-логика и сервисы
 │
-├── Polyclinic.Infrastructure.Mongo      # MongoDB репозитории
-├── Polyclinic.Infrastructure.InMemory   # In-memory реализация
-├── Polyclinic.Infrastructure.Nats       # NATS consumer
+├── Polyclinic.Infrastructure.Mongo/      # MongoDB репозитории
+├── Polyclinic.Infrastructure.InMemory/   # In-memory реализация
+├── Polyclinic.Infrastructure.Nats/       # NATS consumers
 │
-├── Polyclinic.Api.Host                  # REST API сервис
-├── Polyclinic.Generator.Nats.Host       # Генератор данных
-├── Polyclinic.Validator.Nats            # Валидатор appointments
+├── Polyclinic.Api.Host/                  # REST API микросервис
+├── Polyclinic.Generator.Nats.Host/       # Генератор данных
+├── Polyclinic.Validator.Nats/            # Валидатор записей
 │
-├── Polyclinic.AppHost                   # Aspire orchestrator
-├── Polyclinic.ServiceDefaults           # Общие настройки
-└── Polyclinic.Tests                     # Модульные тесты
+├── Polyclinic.Client.Wasm/               # Blazor WebAssembly клиент
+│
+├── Polyclinic.AppHost/                   # Aspire оркестратор
+├── Polyclinic.ServiceDefaults/           # Общие настройки
+└── Polyclinic.Tests/                     # Тесты
 ```
 
 ---
 
 ## Запуск проекта
 
-### Требования
+### Системные требования
 - .NET 8.0 SDK
-- Docker (для MongoDB и NATS)
+- Docker Desktop (для MongoDB и NATS)
+- Современный веб-браузер
 
 ### Запуск через .NET Aspire
-
 ```bash
 dotnet run --project Polyclinic.AppHost
 ```
-
-Aspire автоматически запустит:
-- MongoDB
-- NATS JetStream
-- API сервис
-- Generator сервис
-- Validator сервис
-- Aspire Dashboard

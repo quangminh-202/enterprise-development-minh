@@ -1,0 +1,196 @@
+@inject PolyclinicApiWrapper PolyclinicApi
+@inject IJSRuntime JSRuntime
+
+<Card>
+    <CardHeader>
+        <Row Class="justify-content-between">
+            <Column ColumnSize="ColumnSize.IsAuto">
+                <h4>Doctor Management</h4>
+            </Column>
+            <Column ColumnSize="ColumnSize.IsAuto">
+                <Button Color="Color.Primary" Clicked="OpenCreateModal">
+                    <Icon Name="IconName.Add" /> Add New
+                </Button>
+                <Button Color="Color.Secondary" Clicked="RefreshData">
+                    <Icon Name="IconName.Sync" /> Refresh
+                </Button>
+            </Column>
+        </Row>
+    </CardHeader>
+    <CardBody>
+        <DataGrid TItem="DoctorDto"
+                  Data="Doctors"
+                  Responsive
+                  Striped
+                  Hoverable
+                  ShowPager
+                  PageSize="10">
+            <DataGridColumns>
+                <DataGridColumn Width="150px"
+                                TItem="DoctorDto"
+                                Field="@nameof(DoctorDto.Id)"
+                                Caption="Actions"
+                                Sortable="false">
+                    <DisplayTemplate>
+                        <Dropdown>
+                            <DropdownToggle Color="Color.Primary" Size="Size.Small">
+                                <Icon Name="IconName.Settings" /> Actions
+                            </DropdownToggle>
+                            <DropdownMenu>
+                                <DropdownItem Clicked="() => OpenEditModal(context)">
+                                    <Icon Name="IconName.Edit" /> Edit
+                                </DropdownItem>
+                                <DropdownDivider />
+                                <DropdownItem Clicked="() => DeleteDoctorAsync(context)" TextColor="TextColor.Danger">
+                                    <Icon Name="IconName.Delete" /> Delete
+                                </DropdownItem>
+                            </DropdownMenu>
+                        </Dropdown>
+                    </DisplayTemplate>
+                </DataGridColumn>
+
+                <DataGridColumn TItem="DoctorDto"
+                                Field="@nameof(DoctorDto.Id)"
+                                Caption="ID"
+                                Sortable
+                                Width="80px">
+                    <DisplayTemplate>
+                        <Badge Color="Color.Primary">
+                            @context.Id
+                        </Badge>
+                    </DisplayTemplate>
+                </DataGridColumn>
+                
+                <DataGridColumn TItem="DoctorDto"
+                                Field="@nameof(DoctorDto.Passport)"
+                                Caption="Passport"
+                                Sortable>
+                    <DisplayTemplate>
+                        <Badge Color="Color.Secondary">
+                            @context.Passport
+                        </Badge>
+                    </DisplayTemplate>
+                </DataGridColumn>
+                
+                <DataGridColumn TItem="DoctorDto"
+                                Field="@nameof(DoctorDto.FullName)"
+                                Caption="Full Name"
+                                Sortable>
+                    <DisplayTemplate>
+                        <div class="d-flex align-items-center">
+                            <Icon Name="IconName.User" Class="me-2 text-primary" />
+                            <div>
+                                <strong>@context.FullName</strong>
+                            </div>
+                        </div>
+                    </DisplayTemplate>
+                </DataGridColumn>
+                
+                <DataGridColumn TItem="DoctorDto"
+                                Field="@nameof(DoctorDto.Specialization)"
+                                Caption="Specialization"
+                                Sortable>
+                    <DisplayTemplate>
+                        <Badge Color="Color.Success">
+                            <Icon Name="IconName.Heart" /> @context.Specialization
+                        </Badge>
+                    </DisplayTemplate>
+                </DataGridColumn>
+                
+                <DataGridColumn TItem="DoctorDto"
+                                Field="@nameof(DoctorDto.BirthYear)"
+                                Caption="Birth Year"
+                                Sortable>
+                    <DisplayTemplate>
+                        @context.BirthYear
+                        <br />
+                        <small class="text-muted">(@(DateTime.Now.Year - context.BirthYear) years old)</small>
+                    </DisplayTemplate>
+                </DataGridColumn>
+                
+                <DataGridColumn TItem="DoctorDto"
+                                Field="@nameof(DoctorDto.Experience)"
+                                Caption="Experience"
+                                Sortable>
+                    <DisplayTemplate>
+                        <Badge Color="Color.Info">
+                            @context.Experience years
+                        </Badge>
+                    </DisplayTemplate>
+                </DataGridColumn>
+            </DataGridColumns>
+            
+            <LoadingTemplate>
+                <div class="text-center p-4">
+                    <p class="mt-2">Loading data...</p>
+                </div>
+            </LoadingTemplate>
+            
+            <EmptyTemplate>
+                <div class="text-center p-4">
+                    <Icon Name="IconName.User" Style="font-size: 3rem; color: #ccc;" />
+                    <h5 class="mt-3">No doctors found</h5>
+                    <p class="text-muted">Click "Add New" button to create the first doctor</p>
+                </div>
+            </EmptyTemplate>
+        </DataGrid>
+    </CardBody>
+</Card>
+
+<DoctorCreateModal @ref="DoctorCreateModal" OnDoctorSaved="@HandleDoctorSaved" />
+
+@code {
+    [Parameter] public EventCallback OnDataChanged { get; set; }
+
+    private IList<DoctorDto> Doctors { get; set; } = new List<DoctorDto>();
+    private DoctorCreateModal DoctorCreateModal { get; set; } = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await RefreshData();
+    }
+
+    private async Task RefreshData()
+    {
+        try
+        {
+            var doctors = await PolyclinicApi.GetAllDoctors();
+            Doctors = doctors?.ToList() ?? new List<DoctorDto>();
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", $"Error loading doctors: {ex.Message}");
+        }
+    }
+
+    private Task OpenCreateModal() => DoctorCreateModal.Show();
+
+    private Task OpenEditModal(DoctorDto doctor) => DoctorCreateModal.Show(doctor);
+
+    private async Task DeleteDoctorAsync(DoctorDto doctor)
+    {
+        var confirmed = await JSRuntime.InvokeAsync<bool>("confirm", 
+            $"Are you sure you want to delete Dr. {doctor.FullName}?");
+        
+        if (confirmed)
+        {
+            try
+            {
+                await PolyclinicApi.DeleteDoctor(doctor.Id);
+                
+                await RefreshData();
+                await OnDataChanged.InvokeAsync();
+            }
+            catch (Exception ex)
+            {
+                await JSRuntime.InvokeVoidAsync("alert", $"Error deleting doctor: {ex.Message}");
+            }
+        }
+    }
+
+    private async Task HandleDoctorSaved()
+    {
+        await RefreshData();
+        await OnDataChanged.InvokeAsync();
+    }
+}

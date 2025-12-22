@@ -1,0 +1,141 @@
+@page "/analytics"
+@inject PolyclinicApiWrapper PolyclinicApi
+
+<PageTitle>Analytics Dashboard</PageTitle>
+
+<Container Fluid>
+    <Breadcrumb>
+        <BreadcrumbItem>
+            <BreadcrumbLink To="/">
+                <Icon Name="IconName.Home" /> Home
+            </BreadcrumbLink>
+        </BreadcrumbItem>
+        <BreadcrumbItem Active>
+            <Icon Name="IconName.ChartLine" /> Analytics
+        </BreadcrumbItem>
+    </Breadcrumb>
+
+    <!-- Hero Section -->
+    <Card Class="mb-4 bg-gradient-info text-white">
+        <CardBody Class="text-center py-4">
+            <Icon Name="IconName.ChartLine" Style="font-size: 3rem; margin-bottom: 1rem;" />
+            <h1 class="display-5 mb-3">Analytics Dashboard</h1>
+            <p class="lead">Comprehensive insights and analytics for better healthcare management</p>
+        </CardBody>
+    </Card>
+
+    <!-- Analytics Cards Grid -->
+    <Row Class="g-4">
+        <!-- Experienced Doctors -->
+        <Column ColumnSize="ColumnSize.Is6">
+            <ExperiencedDoctorsCard />
+        </Column>
+        
+        <!-- Room Appointments -->
+        <Column ColumnSize="ColumnSize.Is6">
+            <RoomAppointmentsCard />
+        </Column>
+        
+        <!-- Patients by Doctor -->
+        <Column ColumnSize="ColumnSize.Is6">
+            <PatientsByDoctorCard />
+        </Column>
+        
+        <!-- Repeated Appointments -->
+        <Column ColumnSize="ColumnSize.Is6">
+            <RepeatedAppointmentsCard />
+        </Column>
+        
+        <!-- Patients with Multiple Doctors -->
+        <Column ColumnSize="ColumnSize.Is12">
+            <PatientsWithMultipleDoctorsCard />
+        </Column>
+    </Row>
+
+    <!-- Additional Analytics Section -->
+    <Row Class="mt-4">
+        <Column ColumnSize="ColumnSize.Is12">
+            <Card>
+                <CardHeader>
+                    <h4 class="mb-0">
+                        <Icon Name="IconName.Info" /> Quick Analytics Summary
+                    </h4>
+                </CardHeader>
+                <CardBody>
+                    <Row Class="text-center">
+                        <Column ColumnSize="ColumnSize.Is3">
+                            <div class="p-3">
+                                <Icon Name="IconName.Users" Style="font-size: 2rem; color: #007bff;" />
+                                <h5 class="mt-2">@TotalPatients</h5>
+                                <small class="text-muted">Total Patients</small>
+                            </div>
+                        </Column>
+                        <Column ColumnSize="ColumnSize.Is3">
+                            <div class="p-3">
+                                <Icon Name="IconName.User" Style="font-size: 2rem; color: #28a745;" />
+                                <h5 class="mt-2">@TotalDoctors</h5>
+                                <small class="text-muted">Total Doctors</small>
+                            </div>
+                        </Column>
+                        <Column ColumnSize="ColumnSize.Is3">
+                            <div class="p-3">
+                                <Icon Name="IconName.Calendar" Style="font-size: 2rem; color: #ffc107;" />
+                                <h5 class="mt-2">@TotalAppointments</h5>
+                                <small class="text-muted">Total Appointments</small>
+                            </div>
+                        </Column>
+                        <Column ColumnSize="ColumnSize.Is3">
+                            <div class="p-3">
+                                <h5 class="mt-2">@RepeatedVisits</h5>
+                                <small class="text-muted">Repeated Visits</small>
+                            </div>
+                        </Column>
+                    </Row>
+                </CardBody>
+            </Card>
+        </Column>
+    </Row>
+</Container>
+
+<style>
+    .bg-gradient-info {
+        background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
+    }
+</style>
+
+@code {
+    private int TotalPatients { get; set; } = 0;
+    private int TotalDoctors { get; set; } = 0;
+    private int TotalAppointments { get; set; } = 0;
+    private int RepeatedVisits { get; set; } = 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadSummaryStats();
+    }
+
+    private async Task LoadSummaryStats()
+    {
+        try
+        {
+            var patientsTask = PolyclinicApi.GetAllPatients();
+            var doctorsTask = PolyclinicApi.GetAllDoctors();
+            var appointmentsTask = PolyclinicApi.GetAllAppointments();
+            var repeatedTask = PolyclinicApi.GetRepeatedAppointments(1);
+
+            await Task.WhenAll(patientsTask, doctorsTask, appointmentsTask, repeatedTask);
+
+            TotalPatients = (await patientsTask).Count;
+            TotalDoctors = (await doctorsTask).Count;
+            TotalAppointments = (await appointmentsTask).Count;
+            RepeatedVisits = (await repeatedTask).TotalCount;
+        }
+        catch (Exception)
+        {
+            TotalPatients = 0;
+            TotalDoctors = 0;
+            TotalAppointments = 0;
+            RepeatedVisits = 0;
+        }
+    }
+}
